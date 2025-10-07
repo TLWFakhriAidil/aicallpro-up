@@ -58,7 +58,7 @@ serve(async (req) => {
     
     const user = { id: userData.id, username: userData.username };
 
-    const { campaignName, promptId, phoneNumbers, retryEnabled, retryIntervalMinutes, maxRetryAttempts } = await req.json();
+    const { campaignName, promptId, phoneNumbers, customerName, retryEnabled, retryIntervalMinutes, maxRetryAttempts } = await req.json();
 
     console.log(`Starting batch call campaign: ${campaignName} for user: ${user.id}`);
 
@@ -376,14 +376,18 @@ serve(async (req) => {
           const replaceVariables = (text: string) => {
             let result = text;
             
+            // Priority logic for customer name:
+            // 1. Use contactData.name if exists
+            // 2. Use customerName from request if contact DB doesn't have it
+            // 3. Fallback to "Cik" if both are missing or empty
+            const nameToUse = (contactData && contactData.name) || customerName || "Cik";
+            
             // Replace phone number variable
             result = result.replace(/\{\{CUSTOMER_PHONE_NUMBER\}\}/g, phoneNumber);
             
-            // Replace customer name variable if contact data exists
-            if (contactData && contactData.name) {
-              result = result.replace(/\{\{customer_name\}\}/g, contactData.name);
-              result = result.replace(/\{\{CUSTOMER_NAME\}\}/g, contactData.name);
-            }
+            // Replace customer name variables with priority logic
+            result = result.replace(/\{\{customer_name\}\}/g, nameToUse);
+            result = result.replace(/\{\{CUSTOMER_NAME\}\}/g, nameToUse);
             
             // Replace other common variables from prompt variables if defined
             if (prompt.variables && Array.isArray(prompt.variables)) {
@@ -396,9 +400,8 @@ serve(async (req) => {
                   case 'customer_name':
                   case 'name':
                   case 'nama':
-                    if (contactData && contactData.name) {
-                      result = result.replace(placeholder, contactData.name);
-                    }
+                    // Use the same priority logic for name variables
+                    result = result.replace(placeholder, nameToUse);
                     break;
                   case 'phone_number':
                   case 'phone':
