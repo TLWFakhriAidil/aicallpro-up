@@ -1,1 +1,7 @@
 project_id = "ephpobvbzlemgixverve"
+
+[functions.campaign-batch-list]
+verify_jwt = false
+
+[functions.campaign-batch-detail]
+verify_jwt = false
