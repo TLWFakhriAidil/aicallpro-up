@@ -14,42 +14,25 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
+    // Get user ID from request body
+    const requestBody = await req.json();
+    const { userId } = requestBody;
+    
+    if (!userId) {
+      throw new Error('User ID is required');
     }
 
-    // Create Supabase client
+    // Create Supabase client with service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    // Get user from custom auth session token
-    const sessionToken = authHeader.replace('Bearer ', '');
     
-    // Look up session in user_sessions table
-    const { data: sessionData, error: sessionError } = await supabaseAdmin
-      .from('user_sessions')
-      .select('user_id, expires_at')
-      .eq('session_token', sessionToken)
-      .single();
-    
-    if (sessionError || !sessionData) {
-      console.error('Session lookup failed:', sessionError);
-      throw new Error('Invalid session token: ' + (sessionError?.message || 'Session not found'));
-    }
-    
-    // Check if session has expired
-    if (new Date(sessionData.expires_at) < new Date()) {
-      throw new Error('Session expired');
-    }
-    
-    // Get user from users table
+    // Verify user exists
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, username')
-      .eq('id', sessionData.user_id)
+      .eq('id', userId)
       .single();
     
     if (userError || !userData) {
@@ -58,7 +41,7 @@ serve(async (req) => {
     
     const user = { id: userData.id, username: userData.username };
 
-    const { campaignName, promptId, phoneNumbers, customerName, retryEnabled, retryIntervalMinutes, maxRetryAttempts } = await req.json();
+    const { campaignName, promptId, phoneNumbers, customerName, retryEnabled, retryIntervalMinutes, maxRetryAttempts } = requestBody;
 
     console.log(`Starting batch call campaign: ${campaignName} for user: ${user.id}`);
 

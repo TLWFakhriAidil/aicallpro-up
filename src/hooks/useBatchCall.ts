@@ -164,17 +164,10 @@ export function useBatchCall(options: UseBatchCallOptions = {}) {
         toast.warning(`${invalidNumbers.length} nombor tidak sah akan diabaikan`);
       }
 
-      // Call the batch-call edge function with custom auth token
-      const customAuthToken = localStorage.getItem('customAuthToken');
-      if (!customAuthToken) {
-        throw new Error("Anda perlu log masuk semula");
-      }
-
+      // Call the batch-call edge function
       const { data: response, error } = await supabase.functions.invoke('batch-call', {
-        headers: {
-          'Authorization': `Bearer ${customAuthToken}`
-        },
         body: {
+          userId: user.id,
           campaignName: data.campaignName,
           promptId: data.promptId,
           phoneNumbers: validNumbers,
