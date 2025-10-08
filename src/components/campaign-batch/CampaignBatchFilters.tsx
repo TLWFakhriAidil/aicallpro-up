@@ -10,6 +10,7 @@ export interface CampaignBatchFilters {
   dateTo: string;
   sortBy: 'campaign_name' | 'total_batches' | 'total_calls' | 'latest_created_at';
   sortOrder: 'asc' | 'desc';
+  stage: string;
 }
 
 interface CampaignBatchFiltersProps {
@@ -28,7 +29,7 @@ export function CampaignBatchFilters({
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Search */}
           <div className="space-y-2">
             <Label htmlFor="search" className="flex items-center gap-2 text-sm font-medium">
@@ -68,6 +69,20 @@ export function CampaignBatchFilters({
               type="date"
               value={filters.dateTo}
               onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
+            />
+          </div>
+
+          {/* Stage Filter */}
+          <div className="space-y-2">
+            <Label htmlFor="stage" className="flex items-center gap-2 text-sm font-medium">
+              <Search className="h-4 w-4" />
+              Stage
+            </Label>
+            <Input
+              id="stage"
+              placeholder="e.g. confirmation"
+              value={filters.stage}
+              onChange={(e) => onFiltersChange({ ...filters, stage: e.target.value })}
             />
           </div>
 

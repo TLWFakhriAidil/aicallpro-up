@@ -23,7 +23,8 @@ export function CampaignsList() {
     dateTo: '',
     sortBy: 'created_at',
     sortOrder: 'desc',
-    callStatus: 'all'
+    callStatus: 'all',
+    stage: ''
   });
   const itemsPerPage = 10;
   const { user } = useCustomAuth();
@@ -147,7 +148,11 @@ export function CampaignsList() {
         filters.callStatus === 'has_answered' ? (campaign.successful_calls || 0) > 0 :
         (campaign.successful_calls || 0) === 0;
       
-      return matchesSearch && matchesStatusSync;
+      // Apply stage filter - check if campaign has calls with matching stage
+      const matchesStage = !filters.stage || 
+        (campaign.top_stage && campaign.top_stage.toLowerCase().includes(filters.stage.toLowerCase()));
+      
+      return matchesSearch && matchesStatusSync && matchesStage;
     });
   }, [campaignsData, filters.search, filters.callStatus]);
 

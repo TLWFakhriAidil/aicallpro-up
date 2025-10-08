@@ -31,6 +31,7 @@ export function CampaignBatchList() {
     dateTo: '',
     sortBy: 'latest_created_at',
     sortOrder: 'desc',
+    stage: ''
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
@@ -77,7 +78,7 @@ export function CampaignBatchList() {
 
       let query = supabase
         .from('campaigns')
-        .select('campaign_name, total_numbers, successful_calls, failed_calls, created_at')
+        .select('campaign_name, total_numbers, successful_calls, failed_calls, created_at, id')
         .eq('user_id', user.id);
 
       // Date range filter
@@ -95,8 +96,29 @@ export function CampaignBatchList() {
       const { data, error } = await query;
       if (error) throw error;
 
+      // If stage filter is applied, filter campaigns by stage
+      let filteredData = data;
+      if (filters.stage) {
+        const campaignsWithStage = await Promise.all(
+          data.map(async (campaign) => {
+            const { data: callLogs } = await supabase
+              .from('call_logs')
+              .select('stage_reached')
+              .eq('campaign_id', campaign.id)
+              .not('stage_reached', 'is', null);
+            
+            const hasMatchingStage = callLogs?.some(log => 
+              log.stage_reached?.toLowerCase().includes(filters.stage.toLowerCase())
+            );
+            
+            return hasMatchingStage ? campaign : null;
+          })
+        );
+        filteredData = campaignsWithStage.filter(c => c !== null) as typeof data;
+      }
+
       // Group by campaign_name
-      const grouped = data.reduce((acc, campaign) => {
+      const grouped = filteredData.reduce((acc, campaign) => {
         const name = campaign.campaign_name;
         if (!acc[name]) {
           acc[name] = {

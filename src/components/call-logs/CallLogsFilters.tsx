@@ -13,6 +13,7 @@ export interface CallLogsFilters {
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   callStatus: 'all' | 'answered' | 'not_answered';
+  stage: string;
 }
 
 interface CallLogsFiltersProps {
@@ -46,19 +47,22 @@ export function CallLogsFilters({
       dateTo: '',
       sortBy: 'created_at',
       sortOrder: 'desc',
-      callStatus: 'all'
+      callStatus: 'all',
+      stage: ''
     });
   };
 
   const hasActiveFilters = filters.search || 
     filters.dateFrom || 
     filters.dateTo ||
-    filters.callStatus !== 'all';
+    filters.callStatus !== 'all' ||
+    filters.stage;
 
   const activeFiltersCount = [
     filters.search,
     filters.dateFrom || filters.dateTo,
-    filters.callStatus !== 'all'
+    filters.callStatus !== 'all',
+    filters.stage
   ].filter(Boolean).length;
 
   return (
@@ -104,7 +108,7 @@ export function CallLogsFilters({
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -146,6 +150,19 @@ export function CallLogsFilters({
                   <SelectItem value="not_answered">Customer Tak Angkat</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Stage
+              </label>
+              <Input
+                placeholder="e.g. confirmation"
+                value={filters.stage}
+                onChange={(e) => updateFilter('stage', e.target.value)}
+                className="w-full"
+              />
             </div>
 
           </div>

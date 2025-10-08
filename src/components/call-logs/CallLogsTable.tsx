@@ -67,7 +67,8 @@ export function CallLogsTable() {
     dateTo: '',
     sortBy: 'created_at',
     sortOrder: 'desc',
-    callStatus: 'all'
+    callStatus: 'all',
+    stage: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -267,7 +268,11 @@ export function CallLogsTable() {
       filters.callStatus === 'answered' ? log.status === 'answered' :
       log.status !== 'answered';
 
-    return matchesSearch && matchesStatus;
+    // Apply stage filter
+    const matchesStage = !filters.stage || 
+      (log.stage_reached && log.stage_reached.toLowerCase().includes(filters.stage.toLowerCase()));
+
+    return matchesSearch && matchesStatus && matchesStage;
   }) || [];
 
   const totalCost = filteredLogs.reduce(
