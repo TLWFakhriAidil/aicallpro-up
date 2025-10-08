@@ -1,4 +1,6 @@
 import { PromptsList } from '@/components/prompts/PromptsList';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 export default function PromptsPage() {
   return (
@@ -11,6 +13,35 @@ export default function PromptsPage() {
               Cipta dan urus templat skrip untuk kempen panggilan AI anda
             </p>
           </div>
+
+          <Alert className="mb-6">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Panduan Setup Stage dalam Prompt</AlertTitle>
+            <AlertDescription className="mt-2 space-y-2">
+              <p>
+                Untuk menjejak progress perbualan AI anda, gunakan penanda <code className="bg-muted px-1.5 py-0.5 rounded text-sm">!!Stage [Nama Stage]!!</code> dalam System Prompt anda.
+              </p>
+              <div className="mt-3">
+                <p className="font-semibold mb-2">Contoh penggunaan:</p>
+                <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
+{`1. !!Stage Pembukaan!!
+Purpose: Salam dan kenalan
+Tanya: "Assalamualaikum, saya AI Assistant..."
+
+2. !!Stage Pengesahan Keperluan!!
+Purpose: Confirm customer needs
+Tanya: "Adakah anda berminat dengan..."
+
+3. !!Stage Penutupan!!
+Purpose: Close conversation
+Action: Tutup panggilan dengan mesra`}
+                </pre>
+              </div>
+              <p className="text-sm text-muted-foreground mt-3">
+                💡 Sistem akan automatically detect stage mana yang dicapai oleh AI dalam setiap panggilan dan paparkan dalam analytics.
+              </p>
+            </AlertDescription>
+          </Alert>
 
           <PromptsList />
         </div>
