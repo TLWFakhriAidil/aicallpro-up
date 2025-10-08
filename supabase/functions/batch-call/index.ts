@@ -413,6 +413,30 @@ serve(async (req) => {
           console.log(`Original first message: ${prompt.first_message}`);
           console.log(`Replaced first message: ${callFirstMessage}`);
 
+          // Extract stages from system prompt using !!Stage [Name]!! pattern
+          const extractStages = (text: string): string[] => {
+            const stageRegex = /!!Stage\s+([^!]+?)!!/g;
+            const stages: string[] = [];
+            let match;
+            
+            while ((match = stageRegex.exec(text)) !== null) {
+              const stageName = match[1].trim();
+              if (stageName && !stages.includes(stageName)) {
+                stages.push(stageName);
+              }
+            }
+            
+            return stages;
+          };
+
+          // Get stages from system prompt, fallback to default if none found
+          const extractedStages = extractStages(prompt.system_prompt);
+          const stagesList = extractedStages.length > 0 
+            ? extractedStages 
+            : ['Introduction', 'Fact Finding', 'Presentation', 'Closing', 'Confirmation'];
+
+          console.log(`Extracted ${extractedStages.length} stages from prompt:`, stagesList);
+
           // Complete assistant configuration with tools and analysis
           const fullAssistantConfig = {
             ...assistantConfig,
@@ -504,9 +528,7 @@ Only respond with the JSON.`
                     },
                     stage_reached: {
                       type: 'string',
-                      enum: prompt.stages && Array.isArray(prompt.stages) && prompt.stages.length > 0 
-                        ? prompt.stages 
-                        : ['Introduction', 'Fact Finding', 'Presentation', 'Closing', 'Confirmation'],
+                      enum: stagesList,
                       description: 'Peringkat tertinggi yang dicapai dalam aliran perbualan berdasarkan prompt yang digunakan.'
                     },
                     is_closed: {
