@@ -151,6 +151,7 @@ export function AiConfigForm() {
       const predefinedVoices = [
         "UcqZLa941Kkt8ZhEEybf",
         "QDwlG1e3yL8LkVHOemYW",
+        "pmXDuKsKkdOYyHRPhJcm",
         "qAJVXEQ6QgjOQ25KuoU8",
         "lMSqoJeA0cBBNA9FeHAs",
         "Wc6X61hTD7yucJMheuLN",
@@ -231,6 +232,7 @@ export function AiConfigForm() {
         const voiceMap: { [key: string]: string } = {
           UcqZLa941Kkt8ZhEEybf: "UcqZLa941Kkt8ZhEEybf",
           QDwlG1e3yL8LkVHOemYW: "QDwlG1e3yL8LkVHOemYW",
+          pmXDuKsKkdOYyHRPhJcm: "pmXDuKsKkdOYyHRPhJcm",
           qAJVXEQ6QgjOQ25KuoU8: "qAJVXEQ6QgjOQ25KuoU8",
           lMSqoJeA0cBBNA9FeHAs: "lMSqoJeA0cBBNA9FeHAs",
           Wc6X61hTD7yucJMheuLN: "Wc6X61hTD7yucJMheuLN",
