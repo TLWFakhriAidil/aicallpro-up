@@ -1,21 +1,14 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useCustomAuth } from "@/contexts/CustomAuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Eye, BarChart3, Calendar, Users, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { CampaignBatchDetail } from "./CampaignBatchDetail";
-import { CampaignBatchFilters, CampaignBatchFilters as CampaignBatchFiltersType } from "./CampaignBatchFilters";
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useCustomAuth } from '@/contexts/CustomAuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Eye, BarChart3, Calendar, Users, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { CampaignBatchDetail } from './CampaignBatchDetail';
+import { CampaignBatchFilters, CampaignBatchFilters as CampaignBatchFiltersType } from './CampaignBatchFilters';
 
 interface CampaignGroup {
   campaign_name: string;
@@ -32,88 +25,85 @@ export function CampaignBatchList() {
   const [selectedCampaignName, setSelectedCampaignName] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<CampaignBatchFiltersType>({
-    search: "",
-    dateFrom: "",
-    dateTo: "",
-    sortBy: "latest_created_at",
-    sortOrder: "desc",
+    search: '',
+    dateFrom: '',
+    dateTo: '',
+    sortBy: 'latest_created_at',
+    sortOrder: 'desc',
   });
   const itemsPerPage = 10;
 
   // Delete campaign mutation
   const deleteCampaignMutation = useMutation({
     mutationFn: async (campaignName: string) => {
-      if (!user?.id) throw new Error("User not authenticated");
-
+      if (!user?.id) throw new Error('User not authenticated');
+      
       // Delete all campaigns with this name
       const { error } = await supabase
-        .from("campaigns")
+        .from('campaigns')
         .delete()
-        .eq("user_id", user.id)
-        .eq("campaign_name", campaignName);
-
+        .eq('user_id', user.id)
+        .eq('campaign_name', campaignName);
+      
       if (error) throw error;
     },
     onSuccess: () => {
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ["campaign-groups"] });
+      queryClient.invalidateQueries({ queryKey: ['campaign-groups'] });
     },
   });
 
   // Fetch grouped campaigns
   const { data: campaignGroups, isLoading } = useQuery({
-    queryKey: ["campaign-groups", user?.id, filters],
+    queryKey: ['campaign-groups', user?.id, filters],
     queryFn: async () => {
       if (!user?.id) return [];
 
       let query = supabase
-        .from("campaigns")
-        .select("campaign_name, total_numbers, successful_calls, failed_calls, created_at")
-        .eq("user_id", user.id);
+        .from('campaigns')
+        .select('campaign_name, total_numbers, successful_calls, failed_calls, created_at')
+        .eq('user_id', user.id);
 
       // Date range filter
       if (filters.dateFrom) {
         const fromDate = new Date(filters.dateFrom);
         fromDate.setHours(0, 0, 0, 0);
-        query = query.gte("created_at", fromDate.toISOString());
+        query = query.gte('created_at', fromDate.toISOString());
       }
       if (filters.dateTo) {
         const toDate = new Date(filters.dateTo);
         toDate.setHours(23, 59, 59, 999);
-        query = query.lte("created_at", toDate.toISOString());
+        query = query.lte('created_at', toDate.toISOString());
       }
 
       const { data, error } = await query;
       if (error) throw error;
 
       // Group by campaign_name
-      const grouped = data.reduce(
-        (acc, campaign) => {
-          const name = campaign.campaign_name;
-          if (!acc[name]) {
-            acc[name] = {
-              campaign_name: name,
-              total_batches: 0,
-              total_calls: 0,
-              successful_calls: 0,
-              failed_calls: 0,
-              latest_created_at: campaign.created_at,
-            };
-          }
-          acc[name].total_batches += 1;
-          acc[name].total_calls += campaign.total_numbers || 0;
-          acc[name].successful_calls += campaign.successful_calls || 0;
-          acc[name].failed_calls += campaign.failed_calls || 0;
-
-          // Keep the latest date
-          if (new Date(campaign.created_at) > new Date(acc[name].latest_created_at)) {
-            acc[name].latest_created_at = campaign.created_at;
-          }
-
-          return acc;
-        },
-        {} as Record<string, CampaignGroup>,
-      );
+      const grouped = data.reduce((acc, campaign) => {
+        const name = campaign.campaign_name;
+        if (!acc[name]) {
+          acc[name] = {
+            campaign_name: name,
+            total_batches: 0,
+            total_calls: 0,
+            successful_calls: 0,
+            failed_calls: 0,
+            latest_created_at: campaign.created_at,
+          };
+        }
+        acc[name].total_batches += 1;
+        acc[name].total_calls += campaign.total_numbers || 0;
+        acc[name].successful_calls += campaign.successful_calls || 0;
+        acc[name].failed_calls += campaign.failed_calls || 0;
+        
+        // Keep the latest date
+        if (new Date(campaign.created_at) > new Date(acc[name].latest_created_at)) {
+          acc[name].latest_created_at = campaign.created_at;
+        }
+        
+        return acc;
+      }, {} as Record<string, CampaignGroup>);
 
       return Object.values(grouped);
     },
@@ -123,9 +113,10 @@ export function CampaignBatchList() {
   // Apply search and sorting filters
   const filteredGroups = useMemo(() => {
     if (!campaignGroups) return [];
-
-    let filtered = campaignGroups.filter(
-      (group) => !filters.search || group.campaign_name.toLowerCase().includes(filters.search.toLowerCase()),
+    
+    let filtered = campaignGroups.filter(group =>
+      !filters.search || 
+      group.campaign_name.toLowerCase().includes(filters.search.toLowerCase())
     );
 
     // Sort
@@ -133,12 +124,12 @@ export function CampaignBatchList() {
       let aValue: any = a[filters.sortBy];
       let bValue: any = b[filters.sortBy];
 
-      if (filters.sortBy === "latest_created_at") {
+      if (filters.sortBy === 'latest_created_at') {
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
       }
 
-      if (filters.sortOrder === "asc") {
+      if (filters.sortOrder === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
@@ -152,7 +143,12 @@ export function CampaignBatchList() {
   const filteredCount = filteredGroups.length;
 
   if (selectedCampaignName) {
-    return <CampaignBatchDetail campaignName={selectedCampaignName} onBack={() => setSelectedCampaignName(null)} />;
+    return (
+      <CampaignBatchDetail
+        campaignName={selectedCampaignName}
+        onBack={() => setSelectedCampaignName(null)}
+      />
+    );
   }
 
   return (
@@ -172,9 +168,10 @@ export function CampaignBatchList() {
               Senarai Kempen Batch
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {filteredCount === totalCount
-                ? `${totalCount} total campaign groups`
-                : `${filteredCount} of ${totalCount} campaign groups`}
+              {filteredCount === totalCount ? 
+                `${totalCount} total campaign groups` : 
+                `${filteredCount} of ${totalCount} campaign groups`
+              }
             </p>
           </div>
         </CardHeader>
@@ -186,9 +183,10 @@ export function CampaignBatchList() {
           ) : !filteredGroups || filteredGroups.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
-                {filters.search || filters.dateFrom || filters.dateTo
-                  ? "No campaign groups match your filters."
-                  : "Tiada kempen dijumpai. Mulakan kempen batch call pertama anda di halaman Contacts."}
+                {filters.search || filters.dateFrom || filters.dateTo ? 
+                  "No campaign groups match your filters." : 
+                  "Tiada kempen dijumpai. Mulakan kempen batch call pertama anda di halaman Contacts."
+                }
               </p>
             </div>
           ) : (
@@ -204,22 +202,12 @@ export function CampaignBatchList() {
                           variant="ghost"
                           size="sm"
                           className="h-auto p-0 font-semibold hover:bg-transparent"
-                          onClick={() =>
-                            setFilters({
-                              ...filters,
-                              sortBy: "campaign_name",
-                              sortOrder:
-                                filters.sortBy === "campaign_name" && filters.sortOrder === "asc" ? "desc" : "asc",
-                            })
-                          }
+                          onClick={() => setFilters({...filters, sortBy: 'campaign_name', sortOrder: filters.sortBy === 'campaign_name' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
                         >
                           Nama Kempen
-                          {filters.sortBy === "campaign_name" &&
-                            (filters.sortOrder === "asc" ? (
-                              <ChevronUp className="ml-2 h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="ml-2 h-4 w-4" />
-                            ))}
+                          {filters.sortBy === 'campaign_name' && (
+                            filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                          )}
                         </Button>
                       </TableHead>
                       <TableHead>
@@ -227,22 +215,12 @@ export function CampaignBatchList() {
                           variant="ghost"
                           size="sm"
                           className="h-auto p-0 font-semibold hover:bg-transparent"
-                          onClick={() =>
-                            setFilters({
-                              ...filters,
-                              sortBy: "total_batches",
-                              sortOrder:
-                                filters.sortBy === "total_batches" && filters.sortOrder === "asc" ? "desc" : "asc",
-                            })
-                          }
+                          onClick={() => setFilters({...filters, sortBy: 'total_batches', sortOrder: filters.sortBy === 'total_batches' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
                         >
                           Jumlah Batch
-                          {filters.sortBy === "total_batches" &&
-                            (filters.sortOrder === "asc" ? (
-                              <ChevronUp className="ml-2 h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="ml-2 h-4 w-4" />
-                            ))}
+                          {filters.sortBy === 'total_batches' && (
+                            filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                          )}
                         </Button>
                       </TableHead>
                       <TableHead>
@@ -250,200 +228,176 @@ export function CampaignBatchList() {
                           variant="ghost"
                           size="sm"
                           className="h-auto p-0 font-semibold hover:bg-transparent"
-                          onClick={() =>
-                            setFilters({
-                              ...filters,
-                              sortBy: "total_calls",
-                              sortOrder:
-                                filters.sortBy === "total_calls" && filters.sortOrder === "asc" ? "desc" : "asc",
-                            })
-                          }
+                          onClick={() => setFilters({...filters, sortBy: 'total_calls', sortOrder: filters.sortBy === 'total_calls' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
                         >
                           Jumlah Panggilan
-                          {filters.sortBy === "total_calls" &&
-                            (filters.sortOrder === "asc" ? (
-                              <ChevronUp className="ml-2 h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="ml-2 h-4 w-4" />
-                            ))}
+                          {filters.sortBy === 'total_calls' && (
+                            filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                          )}
                         </Button>
                       </TableHead>
-
+                      <TableHead>Success Rate</TableHead>
                       <TableHead>
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-auto p-0 font-semibold hover:bg-transparent"
-                          onClick={() =>
-                            setFilters({
-                              ...filters,
-                              sortBy: "latest_created_at",
-                              sortOrder:
-                                filters.sortBy === "latest_created_at" && filters.sortOrder === "asc" ? "desc" : "asc",
-                            })
-                          }
+                          onClick={() => setFilters({...filters, sortBy: 'latest_created_at', sortOrder: filters.sortBy === 'latest_created_at' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
                         >
                           Tarikh Terakhir
-                          {filters.sortBy === "latest_created_at" &&
-                            (filters.sortOrder === "asc" ? (
-                              <ChevronUp className="ml-2 h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="ml-2 h-4 w-4" />
-                            ))}
+                          {filters.sortBy === 'latest_created_at' && (
+                            filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                          )}
                         </Button>
                       </TableHead>
                       <TableHead className="text-right">Tindakan</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredGroups
-                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                      .map((group, index) => {
-                        const successRate =
-                          group.total_calls > 0
-                            ? ((group.successful_calls / group.total_calls) * 100).toFixed(1)
-                            : "0.0";
+                    {filteredGroups.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((group, index) => {
+                      const successRate = group.total_calls > 0
+                        ? ((group.successful_calls / group.total_calls) * 100).toFixed(1)
+                        : '0.0';
 
-                        return (
-                          <TableRow key={group.campaign_name}>
-                            <TableCell className="text-center font-medium">
-                              {(currentPage - 1) * itemsPerPage + index + 1}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              <p className="font-semibold">{group.campaign_name}</p>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{group.total_batches}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{group.total_calls}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-medium">{successRate}%</span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Calendar className="h-3 w-3" />
-                                <span>
-                                  {new Date(group.latest_created_at).toLocaleDateString("ms-MY", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setSelectedCampaignName(group.campaign_name)}
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (confirm(`Padam semua batch untuk "${group.campaign_name}"?`)) {
-                                      deleteCampaignMutation.mutate(group.campaign_name);
-                                    }
-                                  }}
-                                  disabled={deleteCampaignMutation.isPending}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      return (
+                        <TableRow key={group.campaign_name}>
+                          <TableCell className="text-center font-medium">
+                            {(currentPage - 1) * itemsPerPage + index + 1}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <p className="font-semibold">{group.campaign_name}</p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">{group.total_batches}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">{group.total_calls}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">{successRate}%</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              <span>
+                                {new Date(group.latest_created_at).toLocaleDateString('ms-MY', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedCampaignName(group.campaign_name)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm(`Padam semua batch untuk "${group.campaign_name}"?`)) {
+                                    deleteCampaignMutation.mutate(group.campaign_name);
+                                  }
+                                }}
+                                disabled={deleteCampaignMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
 
               {/* Mobile Cards */}
               <div className="lg:hidden space-y-4">
-                {filteredGroups
-                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                  .map((group, index) => {
-                    const successRate =
-                      group.total_calls > 0 ? ((group.successful_calls / group.total_calls) * 100).toFixed(1) : "0.0";
+                {filteredGroups.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((group, index) => {
+                  const successRate = group.total_calls > 0
+                    ? ((group.successful_calls / group.total_calls) * 100).toFixed(1)
+                    : '0.0';
 
-                    return (
-                      <Card key={group.campaign_name} className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs bg-muted px-2 py-1 rounded">
-                                #{(currentPage - 1) * itemsPerPage + index + 1}
-                              </span>
-                            </div>
-                            <h3 className="font-semibold text-sm">{group.campaign_name}</h3>
+                  return (
+                    <Card key={group.campaign_name} className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs bg-muted px-2 py-1 rounded">
+                              #{(currentPage - 1) * itemsPerPage + index + 1}
+                            </span>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedCampaignName(group.campaign_name)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                if (confirm(`Padam semua batch untuk "${group.campaign_name}"?`)) {
-                                  deleteCampaignMutation.mutate(group.campaign_name);
-                                }
-                              }}
-                              disabled={deleteCampaignMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                          <h3 className="font-semibold text-sm">{group.campaign_name}</h3>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedCampaignName(group.campaign_name)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Padam semua batch untuk "${group.campaign_name}"?`)) {
+                                deleteCampaignMutation.mutate(group.campaign_name);
+                              }
+                            }}
+                            disabled={deleteCampaignMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Jumlah Batch:</span>
+                          <span className="font-medium">{group.total_batches}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Jumlah Panggilan:</span>
+                          <span className="font-medium">{group.total_calls}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Success Rate:</span>
+                          <span className="font-medium">{successRate}%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Tarikh Terakhir:</span>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3 text-muted-foreground" />
+                            <span>
+                              {new Date(group.latest_created_at).toLocaleDateString('ms-MY', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
                           </div>
                         </div>
-
-                        <div className="space-y-2 text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Jumlah Batch:</span>
-                            <span className="font-medium">{group.total_batches}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Jumlah Panggilan:</span>
-                            <span className="font-medium">{group.total_calls}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Success Rate:</span>
-                            <span className="font-medium">{successRate}%</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Tarikh Terakhir:</span>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3 text-muted-foreground" />
-                              <span>
-                                {new Date(group.latest_created_at).toLocaleDateString("ms-MY", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })}
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
 
               {filteredGroups.length > itemsPerPage && (
@@ -451,47 +405,40 @@ export function CampaignBatchList() {
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious
+                        <PaginationPrevious 
                           href="#"
                           onClick={(e) => {
                             e.preventDefault();
                             if (currentPage > 1) setCurrentPage(currentPage - 1);
                           }}
-                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                         />
                       </PaginationItem>
-
-                      {Array.from({ length: Math.ceil(filteredGroups.length / itemsPerPage) }, (_, i) => i + 1).map(
-                        (page) => (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setCurrentPage(page);
-                              }}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ),
-                      )}
-
+                      
+                      {Array.from({ length: Math.ceil(filteredGroups.length / itemsPerPage) }, (_, i) => i + 1).map((page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      
                       <PaginationItem>
-                        <PaginationNext
+                        <PaginationNext 
                           href="#"
                           onClick={(e) => {
                             e.preventDefault();
-                            if (currentPage < Math.ceil(filteredGroups.length / itemsPerPage))
-                              setCurrentPage(currentPage + 1);
+                            if (currentPage < Math.ceil(filteredGroups.length / itemsPerPage)) setCurrentPage(currentPage + 1);
                           }}
-                          className={
-                            currentPage === Math.ceil(filteredGroups.length / itemsPerPage)
-                              ? "pointer-events-none opacity-50"
-                              : "cursor-pointer"
-                          }
+                          className={currentPage === Math.ceil(filteredGroups.length / itemsPerPage) ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                         />
                       </PaginationItem>
                     </PaginationContent>
