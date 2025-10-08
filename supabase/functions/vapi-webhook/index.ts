@@ -559,6 +559,64 @@ const getTwilioCost = async (supabaseClient: any, callSid: string, userId: strin
   }
 };
 
+// Send call data to ERP system
+async function sendToERPSystem(callData: any, userId: string, supabaseClient: any) {
+  try {
+    console.log('📤 SENDING TO ERP SYSTEM:', {
+      call_id: callData.call_id,
+      phone: callData.phone_number,
+      user_id: userId
+    })
+
+    // Get ERP webhook URL from user's phone_config table
+    const { data: config, error: configError } = await supabaseClient
+      .from('phone_config')
+      .select('erp_webhook_url')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (configError || !config?.erp_webhook_url) {
+      console.log('ℹ️ No ERP webhook configured for user:', userId)
+      return
+    }
+
+    const erpWebhookUrl = config.erp_webhook_url
+
+    console.log('🔗 ERP Webhook URL:', erpWebhookUrl)
+
+    // Send data to ERP
+    const response = await fetch(erpWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event_type: 'call_completed',
+        data: callData
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ ERP webhook failed:', {
+        status: response.status,
+        error: errorText
+      })
+      throw new Error(`ERP webhook returned ${response.status}: ${errorText}`)
+    }
+
+    const result = await response.text()
+    console.log('✅ Successfully sent to ERP system:', {
+      status: response.status,
+      response: result.substring(0, 200)
+    })
+
+  } catch (error) {
+    console.error('❌ ERROR sending to ERP:', error)
+    throw error
+  }
+}
+
 async function processEndOfCallReport(supabase: any, message: any) {
   console.log('END OF CALL REPORT RECEIVED:', {
     call_id: message.call?.id || message.id,
@@ -909,6 +967,30 @@ async function processEndOfCallReport(supabase: any, message: any) {
       campaign_id: campaignId,
       status: evaluationStatus
     })
+
+    // Send data to ERP system (if configured)
+    try {
+      await sendToERPSystem({
+        call_id: vapiCallId,
+        phone_number: phoneNumber,
+        campaign_id: campaignId,
+        duration: durationSeconds,
+        status: callOutcome,
+        evaluation_status: evaluationStatus,
+        stage_reached: stageReached,
+        is_closed: isClosed,
+        captured_data: capturedData,
+        vapi_cost: vapiCost,
+        twilio_cost: twilioCost,
+        total_cost: totalCost,
+        transcript: message.transcript,
+        recording_url: message.recordingUrl,
+        timestamp: new Date().toISOString()
+      }, userId, supabase)
+    } catch (erpError) {
+      console.error('⚠️ Failed to send to ERP system (non-blocking):', erpError)
+      // Don't fail the whole webhook if ERP fails
+    }
 
     return new Response(
       JSON.stringify({ 
