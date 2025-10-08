@@ -132,14 +132,17 @@
           let angkat = 0, takAngkat = 0, total = 0;
           group.forEach(batch => {
             (callLogMap[batch.batch_id] || []).forEach(call => {
-              // Ambil dari metadata.call_outcome
-              let outcome = (call.metadata?.call_outcome || call.call_outcome || '').toLowerCase();
-              if (!outcome && call.metadata?.structured_data?.call_outcome)
-                outcome = (call.metadata.structured_data.call_outcome || '').toLowerCase();
-              // Logic: angkat = answered, selain answered = tak angkat
-              if (outcome === "answered") angkat++;
-              else takAngkat++;
               total++;
+              // Ambil dari metadata.call_outcome
+              let outcome = (call.metadata?.call_outcome || call.call_outcome || '').toLowerCase().trim();
+              if (!outcome && call.metadata?.structured_data?.call_outcome)
+                outcome = (call.metadata.structured_data.call_outcome || '').toLowerCase().trim();
+              // Logic: angkat = answered/answer, selain itu = tak angkat
+              if (['answered', 'answer'].includes(outcome)) {
+                angkat++;
+              } else {
+                takAngkat++;
+              }
             });
           });
           result.push({
@@ -222,7 +225,9 @@
             // Kira Angkat/Tak Angkat ikut call_outcome
             let angkat=0, takAngkat=0;
             (allCallLogs[batch.batch_id]||[]).forEach(call=>{
-              const outcome = (call.metadata?.call_outcome||call.call_outcome||'').toLowerCase();
+              let outcome = (call.metadata?.call_outcome||call.call_outcome||'').toLowerCase().trim();
+              if (!outcome && call.metadata?.structured_data?.call_outcome)
+                outcome = (call.metadata.structured_data.call_outcome || '').toLowerCase().trim();
               if (['answered','answer'].includes(outcome)) angkat++;
               else takAngkat++;
             });
@@ -254,7 +259,9 @@
         let calls = allCallLogs[batchId] || [];
         if (calls.length > 0) {
           target.innerHTML = calls.map(call => {
-            const outcome = (call.metadata?.call_outcome||call.call_outcome||'').toLowerCase();
+            let outcome = (call.metadata?.call_outcome||call.call_outcome||'').toLowerCase().trim();
+            if (!outcome && call.metadata?.structured_data?.call_outcome)
+              outcome = (call.metadata.structured_data.call_outcome || '').toLowerCase().trim();
             return `
               <div class="call-item">📞 ${call.phone_number}
                 - <span class="badge ${['answered','answer'].includes(outcome) ? 'badge-success':'badge-danger'}">${['answered','answer'].includes(outcome) ? 'Angkat':'Tak Angkat'}</span>
