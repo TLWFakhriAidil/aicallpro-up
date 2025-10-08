@@ -42,6 +42,7 @@ const phoneConfigSchema = z.object({
 const VOICE_OPTIONS = [
   { id: "UcqZLa941Kkt8ZhEEybf", name: "Afifah", description: "Female voice (Default)", isDefault: true },
   { id: "QDwlG1e3yL8LkVHOemYW", name: "Tasha", description: "Female voice" },
+  { id: "pmXDuKsKkdOYyHRPhJcm", name: "Pn Nurul", description: "Female voice" },
   { id: "qAJVXEQ6QgjOQ25KuoU8", name: "Aisyah", description: "Female voice" },
   { id: "lMSqoJeA0cBBNA9FeHAs", name: "Rizq Khalid", description: "Male voice" },
   { id: "Wc6X61hTD7yucJMheuLN", name: "Faizal", description: "Male voice" },
@@ -150,7 +151,6 @@ export function AiConfigForm() {
       const predefinedVoices = [
         "UcqZLa941Kkt8ZhEEybf",
         "QDwlG1e3yL8LkVHOemYW",
-        "pmXDuKsKkdOYyHRPhJcm",
         "qAJVXEQ6QgjOQ25KuoU8",
         "lMSqoJeA0cBBNA9FeHAs",
         "Wc6X61hTD7yucJMheuLN",
