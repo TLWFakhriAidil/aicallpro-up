@@ -1,20 +1,44 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useCustomAuth } from '@/contexts/CustomAuthContext';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { AudioPlayerDialog } from '@/components/ui/audio-player-dialog';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCustomAuth } from "@/contexts/CustomAuthContext";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AudioPlayerDialog } from "@/components/ui/audio-player-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 interface CampaignBatchDetailProps {
   campaignName: string;
@@ -74,22 +98,22 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   const { user } = useCustomAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // Fetch all campaigns with this name
   const { data: campaigns, isLoading } = useQuery({
-    queryKey: ['campaign-batch-detail', campaignName, user?.id],
+    queryKey: ["campaign-batch-detail", campaignName, user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
 
       const { data, error } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('campaign_name', campaignName)
-        .order('created_at', { ascending: false });
+        .from("campaigns")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("campaign_name", campaignName)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as Campaign[];
@@ -99,14 +123,11 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
 
   // Fetch prompts to show prompt names
   const { data: prompts } = useQuery({
-    queryKey: ['prompts', user?.id],
+    queryKey: ["prompts", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('prompts')
-        .select('id, prompt_name')
-        .eq('user_id', user.id);
-      
+      const { data, error } = await supabase.from("prompts").select("id, prompt_name").eq("user_id", user.id);
+
       if (error) throw error;
       return data;
     },
@@ -115,22 +136,24 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
 
   // Fetch ALL call logs for this campaign name
   const { data: callLogs, isLoading: callLogsLoading } = useQuery({
-    queryKey: ['campaign-batch-calls', campaignName, user?.id],
+    queryKey: ["campaign-batch-calls", campaignName, user?.id],
     queryFn: async () => {
       if (!user?.id || !campaigns) return [];
 
-      const campaignIds = campaigns.map(c => c.id);
-      
+      const campaignIds = campaigns.map((c) => c.id);
+
       const { data, error } = await supabase
-        .from('call_logs')
-        .select(`
+        .from("call_logs")
+        .select(
+          `
           *,
           contacts(name)
-        `)
-        .eq('user_id', user.id)
-        .in('campaign_id', campaignIds)
-        .order('created_at', { ascending: false });
-      
+        `,
+        )
+        .eq("user_id", user.id)
+        .in("campaign_id", campaignIds)
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
       return data as CallLog[];
     },
@@ -141,35 +164,35 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   const stageStats = useMemo(() => {
     if (!callLogs) return [];
 
-    const answeredCalls = callLogs.filter(log => log.status === 'answered');
+    const answeredCalls = callLogs.filter((log) => log.status === "answered");
     const stageMap = new Map<string, { count: number; first_occurrence: number }>();
-    
+
     answeredCalls.forEach((log, index) => {
       const metadata = log.metadata as any;
       const stageReached = metadata?.stage_reached;
-      
+
       if (!stageReached) return;
-      
+
       const stageName = String(stageReached).trim();
-      
+
       if (stageMap.has(stageName)) {
         stageMap.get(stageName)!.count++;
       } else {
         stageMap.set(stageName, {
           count: 1,
-          first_occurrence: index
+          first_occurrence: index,
         });
       }
     });
-    
+
     const stageArray = Array.from(stageMap.entries()).map(([stage_name, data]) => ({
       stage_name,
       count: data.count,
-      first_occurrence: data.first_occurrence
+      first_occurrence: data.first_occurrence,
     }));
-    
+
     stageArray.sort((a, b) => a.first_occurrence - b.first_occurrence);
-    
+
     return stageArray;
   }, [callLogs]);
 
@@ -178,42 +201,42 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   }, [stageStats]);
 
   const getStagePercentage = (count: number) => {
-    return totalStages > 0 ? ((count / totalStages) * 100).toFixed(1) : '0.0';
+    return totalStages > 0 ? ((count / totalStages) * 100).toFixed(1) : "0.0";
   };
 
   const getStageColor = (index: number) => {
     const colors = [
-      { text: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-      { text: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950/30' },
-      { text: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950/30' },
-      { text: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-950/30' },
-      { text: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
-      { text: 'text-pink-500', bg: 'bg-pink-50 dark:bg-pink-950/30' },
-      { text: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-950/30' },
-      { text: 'text-teal-500', bg: 'bg-teal-50 dark:bg-teal-950/30' },
-      { text: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-950/30' },
-      { text: 'text-cyan-500', bg: 'bg-cyan-50 dark:bg-cyan-950/30' }
+      { text: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
+      { text: "text-green-500", bg: "bg-green-50 dark:bg-green-950/30" },
+      { text: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30" },
+      { text: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
+      { text: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+      { text: "text-pink-500", bg: "bg-pink-50 dark:bg-pink-950/30" },
+      { text: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-950/30" },
+      { text: "text-teal-500", bg: "bg-teal-50 dark:bg-teal-950/30" },
+      { text: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30" },
+      { text: "text-cyan-500", bg: "bg-cyan-50 dark:bg-cyan-950/30" },
     ];
     return colors[index % colors.length];
   };
 
   const getPromptName = (campaignId?: string) => {
-    if (!campaignId) return 'No Campaign';
-    
-    const campaign = campaigns?.find(c => c.id === campaignId);
-    if (!campaign || !campaign.prompt_id) return 'No Prompt';
-    
-    const prompt = prompts?.find(p => p.id === campaign.prompt_id);
-    return prompt?.prompt_name || 'Unknown Prompt';
+    if (!campaignId) return "No Campaign";
+
+    const campaign = campaigns?.find((c) => c.id === campaignId);
+    if (!campaign || !campaign.prompt_id) return "No Prompt";
+
+    const prompt = prompts?.find((p) => p.id === campaign.prompt_id);
+    return prompt?.prompt_name || "Unknown Prompt";
   };
 
   const getBatchNumber = (campaignId?: string) => {
-    if (!campaignId || !campaigns) return '-';
-    
+    if (!campaignId || !campaigns) return "-";
+
     // Find the index of this campaign in the sorted list (newest first)
-    const index = campaigns.findIndex(c => c.id === campaignId);
-    if (index === -1) return '-';
-    
+    const index = campaigns.findIndex((c) => c.id === campaignId);
+    if (index === -1) return "-";
+
     // Return batch number (counting from 1, with newest being #1)
     return `#${index + 1}`;
   };
@@ -226,43 +249,41 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
       successful: acc.successful + (campaign.successful_calls || 0),
       failed: acc.failed + (campaign.failed_calls || 0),
     }),
-    { batches: 0, calls: 0, successful: 0, failed: 0 }
+    { batches: 0, calls: 0, successful: 0, failed: 0 },
   );
 
-  const successRate = totals && totals.calls > 0
-    ? ((totals.successful / totals.calls) * 100).toFixed(1)
-    : '0.0';
+  const successRate = totals && totals.calls > 0 ? ((totals.successful / totals.calls) * 100).toFixed(1) : "0.0";
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (callLogId: string) => {
       const { data: callLog } = await supabase
-        .from('call_logs')
-        .select('campaign_id, status')
-        .eq('id', callLogId)
+        .from("call_logs")
+        .select("campaign_id, status")
+        .eq("id", callLogId)
         .single();
 
       const { error } = await supabase
-        .from('call_logs')
+        .from("call_logs")
         .delete()
-        .eq('id', callLogId)
-        .eq('user_id', user?.id || '');
-      
+        .eq("id", callLogId)
+        .eq("user_id", user?.id || "");
+
       if (error) throw error;
 
       if (callLog?.campaign_id) {
-        const isSuccessful = ['completed', 'ended', 'answered'].includes(callLog.status);
-        const isFailed = ['failed', 'cancelled'].includes(callLog.status);
+        const isSuccessful = ["completed", "ended", "answered"].includes(callLog.status);
+        const isFailed = ["failed", "cancelled"].includes(callLog.status);
 
         const { data: campaign } = await supabase
-          .from('campaigns')
-          .select('successful_calls, failed_calls, total_numbers')
-          .eq('id', callLog.campaign_id)
+          .from("campaigns")
+          .select("successful_calls, failed_calls, total_numbers")
+          .eq("id", callLog.campaign_id)
           .single();
 
         if (campaign) {
           const updates: any = {
-            total_numbers: Math.max(0, (campaign.total_numbers || 0) - 1)
+            total_numbers: Math.max(0, (campaign.total_numbers || 0) - 1),
           };
 
           if (isSuccessful) {
@@ -271,18 +292,15 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
             updates.failed_calls = Math.max(0, (campaign.failed_calls || 0) - 1);
           }
 
-          await supabase
-            .from('campaigns')
-            .update(updates)
-            .eq('id', callLog.campaign_id);
+          await supabase.from("campaigns").update(updates).eq("id", callLog.campaign_id);
         }
       }
 
       return callLog;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign-batch-calls'] });
-      queryClient.invalidateQueries({ queryKey: ['campaign-batch-detail'] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-batch-calls"] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-batch-detail"] });
       toast({
         title: "Call log deleted",
         description: "The call log has been successfully deleted.",
@@ -300,36 +318,37 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   // Helper functions
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      'ended': { variant: 'default' as const, label: 'Completed' },
-      'answered': { variant: 'default' as const, label: 'Answered' },
-      'in-progress': { variant: 'default' as const, label: 'In Progress' },
-      'queued': { variant: 'secondary' as const, label: 'Queued' },
-      'ringing': { variant: 'secondary' as const, label: 'Ringing' },
-      'failed': { variant: 'destructive' as const, label: 'Failed' },
-      'cancelled': { variant: 'outline' as const, label: 'Cancelled' },
+      ended: { variant: "default" as const, label: "Completed" },
+      answered: { variant: "default" as const, label: "Answered" },
+      "in-progress": { variant: "default" as const, label: "In Progress" },
+      queued: { variant: "secondary" as const, label: "Queued" },
+      ringing: { variant: "secondary" as const, label: "Ringing" },
+      failed: { variant: "destructive" as const, label: "Failed" },
+      cancelled: { variant: "outline" as const, label: "Cancelled" },
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline' as const, label: status };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || { variant: "outline" as const, label: status };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   const formatDuration = (duration?: number) => {
-    if (!duration) return 'N/A';
+    if (!duration) return "N/A";
     const minutes = Math.floor(duration / 60);
     const seconds = duration % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   const renderRecordingButton = (log: CallLog) => {
-    const recordingUrl = log?.metadata?.recording_url || 
-                        log?.end_of_call_report?.call?.recording?.url ||
-                        log?.end_of_call_report?.recording_url ||
-                        log?.metadata?.recordingUrl;
-    
+    const recordingUrl =
+      log?.metadata?.recording_url ||
+      log?.end_of_call_report?.call?.recording?.url ||
+      log?.end_of_call_report?.recording_url ||
+      log?.metadata?.recordingUrl;
+
     if (!recordingUrl) {
       return <span className="text-xs text-muted-foreground">No recording</span>;
     }
-    
+
     return (
       <AudioPlayerDialog
         recordingUrl={recordingUrl}
@@ -345,7 +364,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
 
   const renderTranscriptDialog = (transcript?: string) => {
     if (!transcript) return <span className="text-xs text-muted-foreground">No transcript</span>;
-    
+
     return (
       <Dialog>
         <DialogTrigger asChild>
@@ -359,9 +378,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
             <DialogTitle>Call Transcript</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-96 w-full">
-            <div className="whitespace-pre-wrap text-sm p-4 bg-muted rounded-md">
-              {transcript}
-            </div>
+            <div className="whitespace-pre-wrap text-sm p-4 bg-muted rounded-md">{transcript}</div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
@@ -372,11 +389,11 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     const endedReason = metadata?.ended_reason;
     const errorDetails = metadata?.error_details || metadata?.error;
     const twilioError = metadata?.twilio_error;
-    
+
     if (!endedReason && !errorDetails && !twilioError) {
       return <span className="text-xs text-muted-foreground">-</span>;
     }
-    
+
     return (
       <Dialog>
         <DialogTrigger asChild>
@@ -433,7 +450,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     if (!capturedData || Object.keys(capturedData).length === 0) {
       return <span className="text-xs text-muted-foreground">No data</span>;
     }
-    
+
     return (
       <Dialog>
         <DialogTrigger asChild>
@@ -451,7 +468,9 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               {Object.entries(capturedData).map(([key, value]) => (
                 <div key={key} className="p-3 bg-muted rounded-md">
                   <p className="font-semibold text-sm mb-1">{key}</p>
-                  <p className="text-sm">{typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}</p>
+                  <p className="text-sm">
+                    {typeof value === "object" ? JSON.stringify(value, null, 2) : String(value)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -462,15 +481,16 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   };
 
   // Filter and paginate call logs
-  const filteredLogs = callLogs?.filter(log => {
-    const searchLower = searchQuery.toLowerCase();
-    const customerName = (log.contacts?.name || '').toLowerCase();
-    return (
-      log.caller_number.toLowerCase().includes(searchLower) ||
-      customerName.includes(searchLower) ||
-      getPromptName(log.campaign_id).toLowerCase().includes(searchLower)
-    );
-  }) || [];
+  const filteredLogs =
+    callLogs?.filter((log) => {
+      const searchLower = searchQuery.toLowerCase();
+      const customerName = (log.contacts?.name || "").toLowerCase();
+      return (
+        log.caller_number.toLowerCase().includes(searchLower) ||
+        customerName.includes(searchLower) ||
+        getPromptName(log.campaign_id).toLowerCase().includes(searchLower)
+      );
+    }) || [];
 
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
@@ -486,9 +506,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
       {/* Header */}
       <div className="space-y-2">
         <h2 className="text-2xl font-bold text-foreground">{campaignName}</h2>
-        <p className="text-muted-foreground">
-          Semua batch dan panggilan untuk kempen ini
-        </p>
+        <p className="text-muted-foreground">Semua batch dan panggilan untuk kempen ini</p>
       </div>
 
       {/* Summary Stats */}
@@ -526,14 +544,6 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{successRate}%</div>
-                <div className="text-sm text-muted-foreground">Success Rate</div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
 
@@ -545,9 +555,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               <TrendingUp className="h-5 w-5 text-primary" />
               <span>Stage Analytics</span>
             </CardTitle>
-            <CardDescription>
-              Distribution of answered calls by conversation stage reached
-            </CardDescription>
+            <CardDescription>Distribution of answered calls by conversation stage reached</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -568,15 +576,13 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-lg">{stage.count}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {getStagePercentage(stage.count)}% of calls
-                      </p>
+                      <p className="text-xs text-muted-foreground">{getStagePercentage(stage.count)}% of calls</p>
                     </div>
                   </div>
                 );
               })}
             </div>
-            
+
             {totalStages > 0 && (
               <div className="mt-6 pt-4 border-t">
                 <div className="flex justify-between text-sm">
@@ -601,9 +607,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               className="w-full sm:w-64"
             />
           </div>
-          <CardDescription>
-            Semua panggilan untuk kempen "{campaignName}"
-          </CardDescription>
+          <CardDescription>Semua panggilan untuk kempen "{campaignName}"</CardDescription>
         </CardHeader>
         <CardContent>
           {callLogsLoading ? (
@@ -614,7 +618,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchQuery ? 'Tiada call logs dijumpai untuk carian ini' : 'Tiada call logs dijumpai'}
+              {searchQuery ? "Tiada call logs dijumpai untuk carian ini" : "Tiada call logs dijumpai"}
             </div>
           ) : (
             <>
@@ -641,21 +645,21 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                       <TableRow key={log.id}>
                         <TableCell className="font-semibold text-xs">{getBatchNumber(log.campaign_id)}</TableCell>
                         <TableCell className="font-mono text-xs">{log.caller_number}</TableCell>
-                        <TableCell className="text-xs">{log.contacts?.name || '-'}</TableCell>
+                        <TableCell className="text-xs">{log.contacts?.name || "-"}</TableCell>
                         <TableCell>{getStatusBadge(log.status)}</TableCell>
                         <TableCell className="text-xs">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {new Date(log.start_time).toLocaleDateString('ms-MY', {
-                              day: '2-digit',
-                              month: 'short',
+                            {new Date(log.start_time).toLocaleDateString("ms-MY", {
+                              day: "2-digit",
+                              month: "short",
                             })}
                           </div>
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {new Date(log.start_time).toLocaleTimeString('ms-MY', {
-                              hour: '2-digit',
-                              minute: '2-digit',
+                            {new Date(log.start_time).toLocaleTimeString("ms-MY", {
+                              hour: "2-digit",
+                              minute: "2-digit",
                             })}
                           </div>
                         </TableCell>
@@ -703,9 +707,9 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        <PaginationPrevious
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                         />
                       </PaginationItem>
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -720,9 +724,9 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                         </PaginationItem>
                       ))}
                       <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        <PaginationNext
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                         />
                       </PaginationItem>
                     </PaginationContent>
