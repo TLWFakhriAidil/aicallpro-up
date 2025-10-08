@@ -245,7 +245,8 @@ export function VoiceProviderSettings() {
           { value: 'EXAVITQu4vr4xnSDxMaL', label: 'Sarah' },
           { value: 'FGY2WhTYpPnrIDTdsKH5', label: 'Laura' },
           { value: 'IKne3meq5aSn9XLyUdCD', label: 'Charlie' },
-          { value: 'Kci88S94DOa31YrdXiWR', label: 'Default Voice' }
+          { value: 'Kci88S94DOa31YrdXiWR', label: 'Default Voice' },
+          { value: 'pmXDuKsKkdOYyHRPhJcm', label: 'Pn Nurul' }
         ];
       case 'openai':
         return [
