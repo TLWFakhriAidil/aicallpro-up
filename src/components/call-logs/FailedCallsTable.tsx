@@ -6,7 +6,7 @@ import { canMakeCalls } from '@/lib/billing';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Calendar, PhoneCall } from 'lucide-react';
+import { Phone, Calendar, PhoneCall, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -192,6 +192,34 @@ export function FailedCallsTable() {
       toast({
         title: 'Gagal memulakan panggilan',
         description: error.message || 'Sila cuba lagi',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete single call mutation
+  const deleteSingleMutation = useMutation({
+    mutationFn: async (callId: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      const { error } = await supabase
+        .from('call_logs')
+        .delete()
+        .eq('id', callId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Panggilan berjaya dipadam',
+      });
+      queryClient.invalidateQueries({ queryKey: ['failed-calls'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Gagal memadam panggilan',
+        description: error.message,
         variant: 'destructive',
       });
     },
@@ -405,15 +433,29 @@ export function FailedCallsTable() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => retrySingleMutation.mutate({ phoneNumber: call.phone_number, promptId: null })}
-                          disabled={retrySingleMutation.isPending}
-                        >
-                          <PhoneCall className="h-4 w-4 mr-1" />
-                          Call Balik
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => retrySingleMutation.mutate({ phoneNumber: call.phone_number, promptId: null })}
+                            disabled={retrySingleMutation.isPending}
+                          >
+                            <PhoneCall className="h-4 w-4 mr-1" />
+                            Call Balik
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm('Padam panggilan ini?')) {
+                                deleteSingleMutation.mutate(call.id);
+                              }
+                            }}
+                            disabled={deleteSingleMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

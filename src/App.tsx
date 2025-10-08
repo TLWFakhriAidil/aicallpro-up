@@ -51,8 +51,8 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <main className="flex-1 flex flex-col">
-          <header className="h-12 flex items-center border-b px-4">
+        <main className="flex-1 flex flex-col relative">
+          <header className="sticky top-0 z-50 h-12 flex items-center border-b px-4 bg-background">
             <SidebarTrigger />
           </header>
           <div className="flex-1">

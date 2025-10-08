@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Eye, BarChart3, Calendar, Users, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, BarChart3, Calendar, Users, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { CampaignBatchDetail } from './CampaignBatchDetail';
 import { CampaignBatchFilters, CampaignBatchFilters as CampaignBatchFiltersType } from './CampaignBatchFilters';
@@ -21,6 +21,7 @@ interface CampaignGroup {
 
 export function CampaignBatchList() {
   const { user } = useCustomAuth();
+  const queryClient = useQueryClient();
   const [selectedCampaignName, setSelectedCampaignName] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<CampaignBatchFiltersType>({
@@ -31,6 +32,26 @@ export function CampaignBatchList() {
     sortOrder: 'desc',
   });
   const itemsPerPage = 10;
+
+  // Delete campaign mutation
+  const deleteCampaignMutation = useMutation({
+    mutationFn: async (campaignName: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      // Delete all campaigns with this name
+      const { error } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('campaign_name', campaignName);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ['campaign-groups'] });
+    },
+  });
 
   // Fetch grouped campaigns
   const { data: campaignGroups, isLoading } = useQuery({
@@ -276,14 +297,28 @@ export function CampaignBatchList() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedCampaignName(group.campaign_name)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedCampaignName(group.campaign_name)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm(`Padam semua batch untuk "${group.campaign_name}"?`)) {
+                                    deleteCampaignMutation.mutate(group.campaign_name);
+                                  }
+                                }}
+                                disabled={deleteCampaignMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -310,13 +345,27 @@ export function CampaignBatchList() {
                           </div>
                           <h3 className="font-semibold text-sm">{group.campaign_name}</h3>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedCampaignName(group.campaign_name)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedCampaignName(group.campaign_name)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Padam semua batch untuk "${group.campaign_name}"?`)) {
+                                deleteCampaignMutation.mutate(group.campaign_name);
+                              }
+                            }}
+                            disabled={deleteCampaignMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                       
                       <div className="space-y-2 text-xs">
