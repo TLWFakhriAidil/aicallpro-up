@@ -78,13 +78,12 @@ export function CallLogsTable() {
     queryFn: async () => {
       if (!user) return [];
       
-      // Build query with filtering and sorting, joining with contacts, campaigns, and prompts
+      // Build query with filtering and sorting, joining with contacts
       let query = supabase
         .from('call_logs')
         .select(`
           *,
-          contacts(name),
-          campaigns(id, prompt_id, prompts(id, prompt_name))
+          contacts(name)
         `)
         .eq('user_id', user.id);
 
@@ -216,16 +215,10 @@ export function CallLogsTable() {
     },
   });
 
-  const getPromptName = (log: any) => {
-    // First try to get from the joined data
-    if (log.campaigns?.prompts?.prompt_name) {
-      return log.campaigns.prompts.prompt_name;
-    }
+  const getPromptName = (campaignId?: string) => {
+    if (!campaignId) return 'No Campaign';
     
-    // Fallback to the old method
-    if (!log.campaign_id) return 'No Campaign';
-    
-    const campaign = campaigns?.find(c => c.id === log.campaign_id);
+    const campaign = campaigns?.find(c => c.id === campaignId);
     if (!campaign || !campaign.prompt_id) return 'No Prompt';
     
     const prompt = prompts?.find(p => p.id === campaign.prompt_id);
@@ -257,7 +250,7 @@ export function CallLogsTable() {
     const customerName = ((log as any).contacts?.name || '').toLowerCase();
     const matchesSearch = (
       log.caller_number.toLowerCase().includes(searchLower) ||
-      getPromptName(log).toLowerCase().includes(searchLower) ||
+      getPromptName(log.campaign_id).toLowerCase().includes(searchLower) ||
       customerName.includes(searchLower)
     );
 
@@ -577,19 +570,6 @@ export function CallLogsTable() {
                         variant="ghost"
                         size="sm"
                         className="h-auto p-0 font-semibold hover:bg-transparent"
-                        onClick={() => setFilters({...filters, sortBy: 'start_time', sortOrder: filters.sortBy === 'start_time' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
-                      >
-                        Started At
-                        {filters.sortBy === 'start_time' && (
-                          filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold hover:bg-transparent"
                         onClick={() => setFilters({...filters, sortBy: 'duration', sortOrder: filters.sortBy === 'duration' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
                       >
                         Duration
@@ -604,6 +584,19 @@ export function CallLogsTable() {
                     <TableHead>Captured Data</TableHead>
                     <TableHead>Info</TableHead>
                     <TableHead>Cost</TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold hover:bg-transparent"
+                        onClick={() => setFilters({...filters, sortBy: 'start_time', sortOrder: filters.sortBy === 'start_time' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
+                      >
+                        Started At
+                        {filters.sortBy === 'start_time' && (
+                          filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                        )}
+                      </Button>
+                    </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -620,7 +613,7 @@ export function CallLogsTable() {
                       {log.caller_number || 'Unknown'}
                     </TableCell>
                     <TableCell>
-                      {getPromptName(log)}
+                      {getPromptName(log.campaign_id)}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-medium text-primary">
@@ -629,14 +622,6 @@ export function CallLogsTable() {
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(log.status)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {new Date(log.start_time).toLocaleDateString()}
-                        <Clock className="h-4 w-4 ml-2 mr-1" />
-                        {new Date(log.start_time).toLocaleTimeString()}
-                      </div>
                     </TableCell>
                     <TableCell>
                       {formatDuration(log.duration)}
@@ -667,6 +652,14 @@ export function CallLogsTable() {
                         <div className="text-xs text-muted-foreground border-t pt-1">
                           Total: ${(log.metadata?.total_cost || log.metadata?.call_cost || 0).toFixed(4)}
                         </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        {new Date(log.start_time).toLocaleDateString()}
+                        <Clock className="h-4 w-4 ml-2 mr-1" />
+                        {new Date(log.start_time).toLocaleTimeString()}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -718,7 +711,7 @@ export function CallLogsTable() {
                         {getStatusBadge(log.status)}
                       </div>
                       <h3 className="font-semibold text-sm">{log.caller_number || 'Unknown'}</h3>
-                      <p className="text-xs text-muted-foreground">{getPromptName(log)}</p>
+                      <p className="text-xs text-muted-foreground">{getPromptName(log.campaign_id)}</p>
                       <p className="text-xs text-primary font-medium">Stage: {log.stage_reached || log.metadata?.stage_reached || '-'}</p>
                     </div>
                   </div>
