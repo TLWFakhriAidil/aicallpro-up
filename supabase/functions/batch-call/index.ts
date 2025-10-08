@@ -228,7 +228,7 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         campaign_name: campaignName,
-        prompt_id: promptId,
+        prompt_id: prompt.id,
         status: 'in_progress',
         total_numbers: validPhones.length,
         retry_enabled: retryEnabled || false,
