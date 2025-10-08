@@ -39,6 +39,7 @@ const VOICE_OPTIONS = {
     { id: 'alice', name: 'Alice (Female, English)' },
     { id: 'sarah', name: 'Sarah (Female, English)' },
     { id: 'liam', name: 'Liam (Male, English)' },
+    { id: 'pmXDuKsKkdOYyHRPhJcm', name: 'Pn Nurul' },
   ],
   openai: [
     { id: 'alloy', name: 'Alloy (Neutral)' },
