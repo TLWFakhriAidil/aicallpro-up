@@ -570,6 +570,19 @@ export function CallLogsTable() {
                         variant="ghost"
                         size="sm"
                         className="h-auto p-0 font-semibold hover:bg-transparent"
+                        onClick={() => setFilters({...filters, sortBy: 'start_time', sortOrder: filters.sortBy === 'start_time' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
+                      >
+                        Started At
+                        {filters.sortBy === 'start_time' && (
+                          filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                        )}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-semibold hover:bg-transparent"
                         onClick={() => setFilters({...filters, sortBy: 'duration', sortOrder: filters.sortBy === 'duration' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
                       >
                         Duration
@@ -584,19 +597,6 @@ export function CallLogsTable() {
                     <TableHead>Captured Data</TableHead>
                     <TableHead>Info</TableHead>
                     <TableHead>Cost</TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold hover:bg-transparent"
-                        onClick={() => setFilters({...filters, sortBy: 'start_time', sortOrder: filters.sortBy === 'start_time' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
-                      >
-                        Started At
-                        {filters.sortBy === 'start_time' && (
-                          filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -622,6 +622,14 @@ export function CallLogsTable() {
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(log.status)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        {new Date(log.start_time).toLocaleDateString()}
+                        <Clock className="h-4 w-4 ml-2 mr-1" />
+                        {new Date(log.start_time).toLocaleTimeString()}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {formatDuration(log.duration)}
@@ -652,14 +660,6 @@ export function CallLogsTable() {
                         <div className="text-xs text-muted-foreground border-t pt-1">
                           Total: ${(log.metadata?.total_cost || log.metadata?.call_cost || 0).toFixed(4)}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {new Date(log.start_time).toLocaleDateString()}
-                        <Clock className="h-4 w-4 ml-2 mr-1" />
-                        {new Date(log.start_time).toLocaleTimeString()}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
