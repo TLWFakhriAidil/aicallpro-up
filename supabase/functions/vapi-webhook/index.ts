@@ -647,9 +647,37 @@ async function processEndOfCallReport(supabase: any, message: any) {
       console.error('Error resolving user_id for call log:', uidErr)
     }
 
-    // Extract structured data from analysis
+    // Extract stage_reached from transcript by detecting !!Stage [Name]!! markers
+    const transcript = message.transcript || '';
+    let stageReached = 'Unknown';
+    
+    // Regular expression to find !!Stage [NAME]!! pattern
+    const stageRegex = /!!Stage\s+([^!]+)!!/g;
+    const stageMatches = [];
+    let match;
+    
+    // Extract all stage markers from transcript
+    while ((match = stageRegex.exec(transcript)) !== null) {
+      const stageName = match[1].trim();
+      stageMatches.push(stageName);
+    }
+    
+    // Use the last detected stage as the final stage reached
+    if (stageMatches.length > 0) {
+      stageReached = stageMatches[stageMatches.length - 1];
+      console.log('📍 STAGE DETECTED from transcript:', {
+        all_stages: stageMatches,
+        final_stage: stageReached
+      });
+    } else {
+      // Fallback to structured data if no stage markers found in transcript
+      const structuredData = message.analysis?.structuredData || {};
+      stageReached = structuredData.stage_reached || 'Unknown';
+      console.log('📍 STAGE from structured data (fallback):', stageReached);
+    }
+    
+    // Extract other structured data from analysis
     const structuredData = message.analysis?.structuredData || {}
-    const stageReached = structuredData.stage_reached || 'Unknown'
     const isClosed = (structuredData.is_closed || 'No') === 'Yes'
     const reasonNotClosed = structuredData.reason_not_closed || null
     const evaluationStatus = isClosed ? 'success' : 'failed'
