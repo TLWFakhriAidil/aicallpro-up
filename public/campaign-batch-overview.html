@@ -43,7 +43,8 @@
       <h2>📞 Campaign Batch Call Overview (Berdasarkan Call Outcome)</h2>
       <div class="filters">
         <input type="text" id="filterName" placeholder="Cari Nama Kempen..." />
-        <input type="date" id="filterDate" />
+        <input type="date" id="filterDateFrom" placeholder="Dari Tarikh" />
+        <input type="date" id="filterDateTo" placeholder="Hingga Tarikh" />
         <button onclick="applyFilter()">Cari</button>
         <button onclick="resetFilter()">Reset</button>
       </div>
@@ -133,12 +134,28 @@
           group.forEach(batch => {
             (callLogMap[batch.batch_id] || []).forEach(call => {
               total++;
-              // Ambil dari metadata.call_outcome
-              let outcome = (call.metadata?.call_outcome || call.call_outcome || '').toLowerCase().trim();
-              if (!outcome && call.metadata?.structured_data?.call_outcome)
-                outcome = (call.metadata.structured_data.call_outcome || '').toLowerCase().trim();
-              // Logic: angkat = answered/answer, selain itu = tak angkat
-              if (['answered', 'answer'].includes(outcome)) {
+              // Check multiple possible locations for call outcome
+              let outcome = '';
+              
+              // Priority 1: metadata.call_outcome
+              if (call.metadata && call.metadata.call_outcome) {
+                outcome = String(call.metadata.call_outcome).toLowerCase().trim();
+              }
+              // Priority 2: call.call_outcome
+              else if (call.call_outcome) {
+                outcome = String(call.call_outcome).toLowerCase().trim();
+              }
+              // Priority 3: metadata.structured_data.call_outcome
+              else if (call.metadata && call.metadata.structured_data && call.metadata.structured_data.call_outcome) {
+                outcome = String(call.metadata.structured_data.call_outcome).toLowerCase().trim();
+              }
+              // Priority 4: status field
+              else if (call.status) {
+                outcome = String(call.status).toLowerCase().trim();
+              }
+              
+              // Logic: angkat = answered/answer/completed, selain itu = tak angkat
+              if (['answered', 'answer', 'completed'].includes(outcome)) {
                 angkat++;
               } else {
                 takAngkat++;
@@ -187,20 +204,34 @@
       // Filter (client-side)
       function applyFilter() {
         let name = document.getElementById('filterName').value.trim().toLowerCase();
-        let date = document.getElementById('filterDate').value; // format yyyy-mm-dd
+        let dateFrom = document.getElementById('filterDateFrom').value; // format yyyy-mm-dd
+        let dateTo = document.getElementById('filterDateTo').value; // format yyyy-mm-dd
         let filtered = allData;
+        
         if (name) {
           filtered = filtered.filter(row => (row.campaign_name||'').toLowerCase().includes(name));
         }
-        if (date) {
-          filtered = filtered.filter(row => row.created_at && row.created_at.slice(0,10) === date);
+        
+        if (dateFrom && dateTo) {
+          filtered = filtered.filter(row => {
+            if (!row.created_at) return false;
+            const rowDate = row.created_at.slice(0,10);
+            return rowDate >= dateFrom && rowDate <= dateTo;
+          });
+        } else if (dateFrom) {
+          filtered = filtered.filter(row => row.created_at && row.created_at.slice(0,10) >= dateFrom);
+        } else if (dateTo) {
+          filtered = filtered.filter(row => row.created_at && row.created_at.slice(0,10) <= dateTo);
         }
+        
         let filteredStats = aggregateStatsByCampaign(filtered, allCallLogs);
         renderGroupedTable(filteredStats);
       }
+      
       function resetFilter() {
         document.getElementById('filterName').value = '';
-        document.getElementById('filterDate').value = '';
+        document.getElementById('filterDateFrom').value = '';
+        document.getElementById('filterDateTo').value = '';
         renderGroupedTable(tableStats);
       }
 
@@ -225,10 +256,14 @@
             // Kira Angkat/Tak Angkat ikut call_outcome
             let angkat=0, takAngkat=0;
             (allCallLogs[batch.batch_id]||[]).forEach(call=>{
-              let outcome = (call.metadata?.call_outcome||call.call_outcome||'').toLowerCase().trim();
-              if (!outcome && call.metadata?.structured_data?.call_outcome)
-                outcome = (call.metadata.structured_data.call_outcome || '').toLowerCase().trim();
-              if (['answered','answer'].includes(outcome)) angkat++;
+              let outcome = '';
+              if (call.metadata && call.metadata.call_outcome) outcome = String(call.metadata.call_outcome).toLowerCase().trim();
+              else if (call.call_outcome) outcome = String(call.call_outcome).toLowerCase().trim();
+              else if (call.metadata && call.metadata.structured_data && call.metadata.structured_data.call_outcome) 
+                outcome = String(call.metadata.structured_data.call_outcome).toLowerCase().trim();
+              else if (call.status) outcome = String(call.status).toLowerCase().trim();
+              
+              if (['answered','answer','completed'].includes(outcome)) angkat++;
               else takAngkat++;
             });
             html += `
@@ -259,13 +294,18 @@
         let calls = allCallLogs[batchId] || [];
         if (calls.length > 0) {
           target.innerHTML = calls.map(call => {
-            let outcome = (call.metadata?.call_outcome||call.call_outcome||'').toLowerCase().trim();
-            if (!outcome && call.metadata?.structured_data?.call_outcome)
-              outcome = (call.metadata.structured_data.call_outcome || '').toLowerCase().trim();
+            let outcome = '';
+            if (call.metadata && call.metadata.call_outcome) outcome = String(call.metadata.call_outcome).toLowerCase().trim();
+            else if (call.call_outcome) outcome = String(call.call_outcome).toLowerCase().trim();
+            else if (call.metadata && call.metadata.structured_data && call.metadata.structured_data.call_outcome) 
+              outcome = String(call.metadata.structured_data.call_outcome).toLowerCase().trim();
+            else if (call.status) outcome = String(call.status).toLowerCase().trim();
+            
+            const isAnswered = ['answered','answer','completed'].includes(outcome);
             return `
               <div class="call-item">📞 ${call.phone_number}
-                - <span class="badge ${['answered','answer'].includes(outcome) ? 'badge-success':'badge-danger'}">${['answered','answer'].includes(outcome) ? 'Angkat':'Tak Angkat'}</span>
-                <span style="color:#888"> [${formatDateTime(call.call_time)}]</span>
+                - <span class="badge ${isAnswered ? 'badge-success':'badge-danger'}">${isAnswered ? 'Angkat':'Tak Angkat'}</span>
+                <span style="color:#888"> [${formatDateTime(call.call_time)}] (${outcome || 'no status'})</span>
               </div>
             `;
           }).join('');
