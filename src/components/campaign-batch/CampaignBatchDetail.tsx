@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info } from "lucide-react";
+import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   Dialog,
@@ -121,18 +121,23 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     enabled: !!user && !!campaignName,
   });
 
-  // Fetch prompts to show prompt names
+  // Fetch prompts to show prompt names and details
   const { data: prompts } = useQuery({
     queryKey: ["prompts", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase.from("prompts").select("id, prompt_name").eq("user_id", user.id);
+      const { data, error } = await supabase.from("prompts").select("*").eq("user_id", user.id);
 
       if (error) throw error;
       return data;
     },
     enabled: !!user,
   });
+
+  // Get the first campaign's prompt for displaying details
+  const firstCampaignPrompt = campaigns && campaigns.length > 0 && campaigns[0].prompt_id 
+    ? prompts?.find(p => p.id === campaigns[0].prompt_id)
+    : null;
 
   // Fetch ALL call logs for this campaign name
   const { data: callLogs, isLoading: callLogsLoading } = useQuery({
@@ -496,58 +501,75 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
 
   return (
-    <div className="space-y-4">
-      {/* Back Button */}
-      <Button onClick={onBack} variant="outline" size="sm">
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Kembali ke Senarai
-      </Button>
-
+    <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-foreground">{campaignName}</h2>
-        <p className="text-muted-foreground">Semua batch dan panggilan untuk kempen ini</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="outline" size="sm" onClick={onBack}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Kembali
+              </Button>
+              <div>
+                <CardTitle>{campaignName}</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Dicipta pada {campaigns && campaigns.length > 0 ? new Date(campaigns[0].created_at).toLocaleDateString('ms-MY', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
-      {/* Summary Stats */}
+      {/* Statistics */}
       {totals && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{totals.batches}</div>
-                <div className="text-sm text-muted-foreground">Total Batch</div>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-500" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Jumlah Nombor</p>
+                  <p className="text-2xl font-bold">{totals.calls}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
+          
           <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{totals.calls}</div>
-                <div className="text-sm text-muted-foreground">Jumlah Panggilan</div>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-success" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Angkat Call</p>
+                  <p className="text-2xl font-bold text-success">{totals.successful}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
+          
           <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{totals.successful}</div>
-                <div className="text-sm text-muted-foreground">Berjaya</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{totals.failed}</div>
-                <div className="text-sm text-muted-foreground">Gagal</div>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-destructive" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Tak Angkat Call</p>
+                  <p className="text-2xl font-bold text-destructive">{totals.failed}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Stage Analytics for all calls in this campaign name */}
+      {/* Stage Analytics */}
       {stageStats.length > 0 && (
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
@@ -591,6 +613,35 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Prompt Details */}
+      {firstCampaignPrompt && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Detail Prompt Yang Digunakan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="font-medium">Nama Prompt:</p>
+                <p className="text-sm text-muted-foreground">{firstCampaignPrompt.prompt_name}</p>
+              </div>
+              <div>
+                <p className="font-medium">Mesej Pertama:</p>
+                <ScrollArea className="max-h-32 w-full">
+                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded">{firstCampaignPrompt.first_message}</p>
+                </ScrollArea>
+              </div>
+              <div>
+                <p className="font-medium">Prompt:</p>
+                <ScrollArea className="max-h-32 w-full">
+                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded">{firstCampaignPrompt.system_prompt}</p>
+                </ScrollArea>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

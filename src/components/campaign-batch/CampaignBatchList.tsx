@@ -236,7 +236,6 @@ export function CampaignBatchList() {
                           )}
                         </Button>
                       </TableHead>
-                      <TableHead>Success Rate</TableHead>
                       <TableHead>
                         <Button
                           variant="ghost"
@@ -255,10 +254,6 @@ export function CampaignBatchList() {
                   </TableHeader>
                   <TableBody>
                     {filteredGroups.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((group, index) => {
-                      const successRate = group.total_calls > 0
-                        ? ((group.successful_calls / group.total_calls) * 100).toFixed(1)
-                        : '0.0';
-
                       return (
                         <TableRow key={group.campaign_name}>
                           <TableCell className="text-center font-medium">
@@ -278,9 +273,6 @@ export function CampaignBatchList() {
                               <Users className="h-4 w-4 text-muted-foreground" />
                               <span className="font-medium">{group.total_calls}</span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-medium">{successRate}%</span>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -330,10 +322,6 @@ export function CampaignBatchList() {
               {/* Mobile Cards */}
               <div className="lg:hidden space-y-4">
                 {filteredGroups.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((group, index) => {
-                  const successRate = group.total_calls > 0
-                    ? ((group.successful_calls / group.total_calls) * 100).toFixed(1)
-                    : '0.0';
-
                   return (
                     <Card key={group.campaign_name} className="p-4">
                       <div className="flex justify-between items-start mb-3">
@@ -376,10 +364,6 @@ export function CampaignBatchList() {
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground">Jumlah Panggilan:</span>
                           <span className="font-medium">{group.total_calls}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Success Rate:</span>
-                          <span className="font-medium">{successRate}%</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground">Tarikh Terakhir:</span>
