@@ -78,12 +78,13 @@ export function CallLogsTable() {
     queryFn: async () => {
       if (!user) return [];
       
-      // Build query with filtering and sorting, joining with contacts
+      // Build query with filtering and sorting, joining with contacts, campaigns, and prompts
       let query = supabase
         .from('call_logs')
         .select(`
           *,
-          contacts(name)
+          contacts(name),
+          campaigns(id, prompt_id, prompts(id, prompt_name))
         `)
         .eq('user_id', user.id);
 
@@ -215,10 +216,16 @@ export function CallLogsTable() {
     },
   });
 
-  const getPromptName = (campaignId?: string) => {
-    if (!campaignId) return 'No Campaign';
+  const getPromptName = (log: any) => {
+    // First try to get from the joined data
+    if (log.campaigns?.prompts?.prompt_name) {
+      return log.campaigns.prompts.prompt_name;
+    }
     
-    const campaign = campaigns?.find(c => c.id === campaignId);
+    // Fallback to the old method
+    if (!log.campaign_id) return 'No Campaign';
+    
+    const campaign = campaigns?.find(c => c.id === log.campaign_id);
     if (!campaign || !campaign.prompt_id) return 'No Prompt';
     
     const prompt = prompts?.find(p => p.id === campaign.prompt_id);
@@ -250,7 +257,7 @@ export function CallLogsTable() {
     const customerName = ((log as any).contacts?.name || '').toLowerCase();
     const matchesSearch = (
       log.caller_number.toLowerCase().includes(searchLower) ||
-      getPromptName(log.campaign_id).toLowerCase().includes(searchLower) ||
+      getPromptName(log).toLowerCase().includes(searchLower) ||
       customerName.includes(searchLower)
     );
 
@@ -613,7 +620,7 @@ export function CallLogsTable() {
                       {log.caller_number || 'Unknown'}
                     </TableCell>
                     <TableCell>
-                      {getPromptName(log.campaign_id)}
+                      {getPromptName(log)}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-medium text-primary">
@@ -711,7 +718,7 @@ export function CallLogsTable() {
                         {getStatusBadge(log.status)}
                       </div>
                       <h3 className="font-semibold text-sm">{log.caller_number || 'Unknown'}</h3>
-                      <p className="text-xs text-muted-foreground">{getPromptName(log.campaign_id)}</p>
+                      <p className="text-xs text-muted-foreground">{getPromptName(log)}</p>
                       <p className="text-xs text-primary font-medium">Stage: {log.stage_reached || log.metadata?.stage_reached || '-'}</p>
                     </div>
                   </div>
