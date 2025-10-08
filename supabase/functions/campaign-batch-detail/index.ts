@@ -12,46 +12,29 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate API Key from Authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const apiKey = authHeader.replace('Bearer ', '');
-
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate API key against api_keys table
-    const { data: apiKeyData, error: apiKeyError } = await supabase
-      .from('api_keys')
-      .select('user_id')
-      .eq('vapi_api_key', apiKey)
-      .single();
-
-    if (apiKeyError || !apiKeyData) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const userId = apiKeyData.user_id;
-
     // Extract batch_id from URL path
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
     const batchId = pathParts[pathParts.length - 1];
+    
+    // Get user_id from query parameter
+    const userId = url.searchParams.get('user_id');
 
     if (!batchId) {
       return new Response(
         JSON.stringify({ error: 'Missing batch_id parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing user_id parameter' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

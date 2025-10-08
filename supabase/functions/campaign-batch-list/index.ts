@@ -12,40 +12,23 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate API Key from Authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const apiKey = authHeader.replace('Bearer ', '');
-
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate API key against api_keys table
-    const { data: apiKeyData, error: apiKeyError } = await supabase
-      .from('api_keys')
-      .select('user_id')
-      .eq('vapi_api_key', apiKey)
-      .single();
+    // Parse query parameters
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('user_id');
 
-    if (apiKeyError || !apiKeyData) {
+    if (!userId) {
       return new Response(
-        JSON.stringify({ error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Missing user_id parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = apiKeyData.user_id;
-
-    // Parse query parameters
-    const url = new URL(req.url);
+    // Parse additional query parameters
     const campaignNameFilter = url.searchParams.get('campaign_name');
     const dateFilter = url.searchParams.get('date');
     const page = parseInt(url.searchParams.get('page') || '1');

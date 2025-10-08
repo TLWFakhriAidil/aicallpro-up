@@ -327,9 +327,12 @@
       // URL Supabase Edge Function
       API_BASE_URL: 'https://ephpobvbzlemgixverve.supabase.co/functions/v1',
       
-      // API Key - GANTIKAN dengan VAPI API Key dari table api_keys (field: vapi_api_key)
-      // Jangan guna Supabase anon key, kena guna VAPI API key
-      API_KEY: 'YOUR_VAPI_API_KEY_HERE',
+      // Supabase Anon Key (public key - safe untuk client-side)
+      SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwaHBvYnZiemxlbWdpeHZlcnZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNDU5NzUsImV4cCI6MjA3NDYyMTk3NX0.Y-g89AZkXvP9kOQnwEr4QLyoFsY8F3FRpmibaJVSG7k',
+      
+      // User ID - GANTIKAN dengan user ID anda dari table users
+      // Untuk dapatkan user_id, run query: SELECT id, username FROM users;
+      USER_ID: 'YOUR_USER_ID_HERE',
       
       // Pagination
       PAGE_SIZE: 20
@@ -350,6 +353,7 @@
       
       // Build query params
       const params = new URLSearchParams({
+        user_id: CONFIG.USER_ID,
         page: currentPage,
         size: CONFIG.PAGE_SIZE
       });
@@ -366,7 +370,7 @@
       fetch(url, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${CONFIG.API_KEY}`,
+          'apikey': CONFIG.SUPABASE_ANON_KEY,
           'Content-Type': 'application/json'
         }
       })
@@ -449,12 +453,12 @@
       document.getElementById('detailModal').style.display = 'block';
       document.getElementById('detailContent').innerHTML = '<div class="loading">Memuatkan detail...</div>';
       
-      const url = `${CONFIG.API_BASE_URL}/campaign-batch-detail/${batchId}`;
+      const url = `${CONFIG.API_BASE_URL}/campaign-batch-detail/${batchId}?user_id=${CONFIG.USER_ID}`;
       
       fetch(url, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${CONFIG.API_KEY}`,
+          'apikey': CONFIG.SUPABASE_ANON_KEY,
           'Content-Type': 'application/json'
         }
       })
@@ -589,12 +593,14 @@
     // INIT - Load data on page load
     // ========================================
     document.addEventListener('DOMContentLoaded', function() {
-      // Check if API key is configured
-      if (CONFIG.API_KEY === 'YOUR_VAPI_API_KEY_HERE') {
+      // Check if User ID is configured
+      if (CONFIG.USER_ID === 'YOUR_USER_ID_HERE') {
         document.getElementById('batchTbody').innerHTML = 
           `<tr><td colspan="8" style="text-align:center; color:#e74c3c; padding:40px;">
             ⚠️ <strong>Configuration Required</strong><br>
-            <small>Sila gantikan CONFIG.API_KEY dengan VAPI API Key anda di bahagian script.</small>
+            <small>Sila gantikan CONFIG.USER_ID dengan User ID anda.<br>
+            Untuk dapatkan user_id, login ke Supabase Dashboard dan run query:<br>
+            <code>SELECT id, username, email FROM users;</code></small>
           </td></tr>`;
         return;
       }
