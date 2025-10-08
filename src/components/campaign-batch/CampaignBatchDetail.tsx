@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle } from "lucide-react";
+import { isCallSuccessful, isCallFailed } from "@/lib/statusUtils";
 import { useMemo, useState } from "react";
 import {
   Dialog,
@@ -246,7 +247,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     return `#${index + 1}`;
   };
 
-  // Calculate totals
+  // Calculate totals from campaigns
   const totals = campaigns?.reduce(
     (acc, campaign) => ({
       batches: acc.batches + 1,
@@ -257,7 +258,29 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     { batches: 0, calls: 0, successful: 0, failed: 0 },
   );
 
-  const successRate = totals && totals.calls > 0 ? ((totals.successful / totals.calls) * 100).toFixed(1) : "0.0";
+  // Calculate accurate statistics from call logs
+  const stats = useMemo(() => {
+    if (!callLogs || callLogs.length === 0) {
+      return {
+        totalCalls: totals?.calls || 0,
+        successfulCalls: totals?.successful || 0,
+        failedCalls: totals?.failed || 0,
+        successRate: 0
+      };
+    }
+
+    const successfulCalls = callLogs.filter(log => isCallSuccessful(log.status)).length;
+    const failedCalls = callLogs.filter(log => isCallFailed(log.status)).length;
+    const totalCalls = callLogs.length;
+    const successRate = totalCalls > 0 ? (successfulCalls / totalCalls * 100) : 0;
+
+    return {
+      totalCalls,
+      successfulCalls,
+      failedCalls,
+      successRate: Math.round(successRate * 10) / 10
+    };
+  }, [callLogs, totals]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -529,45 +552,43 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
       </Card>
 
       {/* Statistics */}
-      {totals && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Jumlah Nombor</p>
-                  <p className="text-2xl font-bold">{totals.calls}</p>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Jumlah Nombor</p>
+                <p className="text-2xl font-bold">{stats.totalCalls}</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-success" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Angkat Call</p>
-                  <p className="text-2xl font-bold text-success">{totals.successful}</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-success" />
+              <div>
+                <p className="text-sm text-muted-foreground">Angkat Call</p>
+                <p className="text-2xl font-bold text-success">{stats.successfulCalls}</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-destructive" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Tak Angkat Call</p>
-                  <p className="text-2xl font-bold text-destructive">{totals.failed}</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-destructive" />
+              <div>
+                <p className="text-sm text-muted-foreground">Tak Angkat Call</p>
+                <p className="text-2xl font-bold text-destructive">{stats.failedCalls}</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Stage Analytics */}
       {stageStats.length > 0 && (
