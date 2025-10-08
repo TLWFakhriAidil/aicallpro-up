@@ -376,6 +376,7 @@ export type Database = {
         Row: {
           connection_status: string | null
           created_at: string
+          erp_webhook_url: string | null
           id: string
           provider: string | null
           twilio_account_sid: string
@@ -391,6 +392,7 @@ export type Database = {
         Insert: {
           connection_status?: string | null
           created_at?: string
+          erp_webhook_url?: string | null
           id?: string
           provider?: string | null
           twilio_account_sid: string
@@ -406,6 +408,7 @@ export type Database = {
         Update: {
           connection_status?: string | null
           created_at?: string
+          erp_webhook_url?: string | null
           id?: string
           provider?: string | null
           twilio_account_sid?: string
