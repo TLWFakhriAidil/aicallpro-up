@@ -9,6 +9,7 @@ import { Eye, BarChart3, Calendar, Users, ChevronUp, ChevronDown, Trash2 } from 
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { CampaignBatchDetail } from './CampaignBatchDetail';
 import { CampaignBatchFilters, CampaignBatchFilters as CampaignBatchFiltersType } from './CampaignBatchFilters';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface CampaignGroup {
   campaign_name: string;
@@ -31,6 +32,8 @@ export function CampaignBatchList() {
     sortBy: 'latest_created_at',
     sortOrder: 'desc',
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   // Delete campaign mutation
@@ -50,8 +53,21 @@ export function CampaignBatchList() {
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ['campaign-groups'] });
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
     },
   });
+
+  const handleDeleteClick = (campaignName: string) => {
+    setCampaignToDelete(campaignName);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (campaignToDelete) {
+      deleteCampaignMutation.mutate(campaignToDelete);
+    }
+  };
 
   // Fetch grouped campaigns
   const { data: campaignGroups, isLoading } = useQuery({
@@ -301,11 +317,7 @@ export function CampaignBatchList() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => {
-                                  if (confirm(`Padam semua batch untuk "${group.campaign_name}"?`)) {
-                                    deleteCampaignMutation.mutate(group.campaign_name);
-                                  }
-                                }}
+                                onClick={() => handleDeleteClick(group.campaign_name)}
                                 disabled={deleteCampaignMutation.isPending}
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -344,11 +356,7 @@ export function CampaignBatchList() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              if (confirm(`Padam semua batch untuk "${group.campaign_name}"?`)) {
-                                deleteCampaignMutation.mutate(group.campaign_name);
-                              }
-                            }}
+                            onClick={() => handleDeleteClick(group.campaign_name)}
                             disabled={deleteCampaignMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -433,6 +441,23 @@ export function CampaignBatchList() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Padam Kempen Batch</AlertDialogTitle>
+            <AlertDialogDescription>
+              Adakah anda pasti mahu padam semua batch untuk "{campaignToDelete}"? Tindakan ini tidak boleh dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Padam
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
