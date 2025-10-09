@@ -95,6 +95,7 @@ export type Database = {
           duration: number | null
           end_of_call_report: Json | null
           id: string
+          idsale: string | null
           is_retry: boolean | null
           metadata: Json | null
           original_campaign_id: string | null
@@ -118,6 +119,7 @@ export type Database = {
           duration?: number | null
           end_of_call_report?: Json | null
           id?: string
+          idsale?: string | null
           is_retry?: boolean | null
           metadata?: Json | null
           original_campaign_id?: string | null
@@ -141,6 +143,7 @@ export type Database = {
           duration?: number | null
           end_of_call_report?: Json | null
           id?: string
+          idsale?: string | null
           is_retry?: boolean | null
           metadata?: Json | null
           original_campaign_id?: string | null
