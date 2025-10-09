@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Trash2, Search, Users, Edit2, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { SortableTable } from "@/components/ui/sortable-table";
 
 // Validation schema for editing contacts
 const editContactSchema = z.object({
@@ -344,18 +345,25 @@ export function ContactList({ userId, selectedContacts, onSelectionChange, refre
               {searchTerm ? "No contacts found matching your search." : "No contacts yet. Add some contacts to get started."}
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredContacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
-                >
-                  <div className="flex items-center space-x-3 flex-1">
+            <SortableTable
+              columns={[
+                {
+                  key: 'select',
+                  label: '',
+                  sortable: false,
+                  className: 'w-12',
+                  render: (_, contact: Contact) => (
                     <Checkbox
                       checked={selectedContacts.includes(contact.id)}
                       onCheckedChange={() => handleSelectContact(contact.id)}
                     />
-                    {editingContact === contact.id ? (
+                  )
+                },
+                {
+                  key: 'name',
+                  label: 'Name',
+                  render: (value, contact: Contact) => (
+                    editingContact === contact.id ? (
                       <div className="flex-1 space-y-2">
                         <div>
                           <Input
@@ -393,7 +401,7 @@ export function ContactList({ userId, selectedContacts, onSelectionChange, refre
                       </div>
                     ) : (
                       <div>
-                        <div className="font-medium">{contact.name}</div>
+                        <div className="font-medium">{value}</div>
                         <div className="text-sm text-muted-foreground">
                           {contact.phone_number}
                         </div>
@@ -403,11 +411,16 @@ export function ContactList({ userId, selectedContacts, onSelectionChange, refre
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {editingContact !== contact.id && contactStats.has(contact.id) && (
-                      <div className="flex items-center gap-3 mr-2 text-xs">
+                    )
+                  )
+                },
+                {
+                  key: 'stats',
+                  label: 'Call Stats',
+                  sortable: false,
+                  render: (_, contact: Contact) => (
+                    editingContact !== contact.id && contactStats.has(contact.id) ? (
+                      <div className="flex items-center gap-3 text-xs">
                         <div className="flex items-center gap-1">
                           <span className="text-muted-foreground">Total:</span>
                           <span className="font-medium">{contactStats.get(contact.id)?.total_calls || 0}</span>
@@ -421,48 +434,64 @@ export function ContactList({ userId, selectedContacts, onSelectionChange, refre
                           <span className="font-medium text-destructive">{contactStats.get(contact.id)?.unanswered_calls || 0}</span>
                         </div>
                       </div>
-                    )}
-                    {editingContact === contact.id ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => saveEdit(contact.id)}
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={cancelEditing}
-                          className="text-gray-600 hover:text-gray-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setContactToEdit(contact)}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setContactToDelete(contact.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    ) : null
+                  )
+                },
+                {
+                  key: 'created_at',
+                  label: 'Created',
+                  render: (value) => new Date(value).toLocaleDateString('ms-MY')
+                },
+                {
+                  key: 'actions',
+                  label: 'Actions',
+                  sortable: false,
+                  className: 'text-right',
+                  render: (_, contact: Contact) => (
+                    <div className="flex justify-end gap-2">
+                      {editingContact === contact.id ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => saveEdit(contact.id)}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={cancelEditing}
+                            className="text-gray-600 hover:text-gray-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setContactToEdit(contact)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setContactToDelete(contact.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )
+                }
+              ]}
+              data={filteredContacts}
+            />
           )}
         </CardContent>
       </Card>

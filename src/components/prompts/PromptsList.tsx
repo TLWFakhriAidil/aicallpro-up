@@ -4,12 +4,12 @@ import { useCustomAuth } from "@/contexts/CustomAuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit2, Trash2, Plus, Tag } from "lucide-react";
+import { Edit2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { PromptsForm } from "./PromptsForm";
 import Swal from "sweetalert2";
+import { SortableTable } from "@/components/ui/sortable-table";
 
 export function PromptsList() {
   const [selectedPrompt, setSelectedPrompt] = useState<any>(null);
@@ -119,130 +119,83 @@ export function PromptsList() {
             </Button>
           </div>
         ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nama Prompt</TableHead>
-                    <TableHead>Variables</TableHead>
-                    <TableHead>Mesej Pertama</TableHead>
-                    <TableHead>Tarikh Dicipta</TableHead>
-                    <TableHead className="text-right">Tindakan</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {prompts.map((prompt) => (
-                    <TableRow key={prompt.id}>
-                      <TableCell className="font-medium">
-                        {prompt.prompt_name}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {prompt.variables && Array.isArray(prompt.variables) && prompt.variables.length > 0 ? (
-                            prompt.variables.slice(0, 2).map((variable: any, index: number) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {`{{${variable.name}}}`}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Tiada variables</span>
-                          )}
-                          {prompt.variables && Array.isArray(prompt.variables) && prompt.variables.length > 2 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{prompt.variables.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {prompt.first_message}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {new Date(prompt.created_at).toLocaleDateString('ms-MY')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(prompt)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(prompt)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="md:hidden space-y-4">
-              {prompts.map((prompt) => (
-                <Card key={prompt.id} className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1 pr-2">
-                      <h3 className="font-semibold text-sm">{prompt.prompt_name}</h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {prompt.first_message}
-                      </p>
-                      {prompt.variables && Array.isArray(prompt.variables) && prompt.variables.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {prompt.variables.slice(0, 3).map((variable: any, index: number) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {`{{${variable.name}}}`}
-                            </Badge>
-                          ))}
-                          {prompt.variables.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{prompt.variables.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(prompt)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(prompt)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+          <SortableTable
+            columns={[
+              {
+                key: 'prompt_name',
+                label: 'Nama Prompt',
+                className: 'font-medium'
+              },
+              {
+                key: 'variables',
+                label: 'Variables',
+                sortable: false,
+                render: (variables: any) => (
+                  <div className="flex flex-wrap gap-1">
+                    {variables && Array.isArray(variables) && variables.length > 0 ? (
+                      <>
+                        {variables.slice(0, 2).map((variable: any, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {`{{${variable.name}}}`}
+                          </Badge>
+                        ))}
+                        {variables.length > 2 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{variables.length - 2}
+                          </Badge>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Tiada variables</span>
+                    )}
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Created:</span>
-                    <Badge variant="outline" className="text-xs">
-                      {new Date(prompt.created_at).toLocaleDateString('ms-MY')}
-                    </Badge>
+                )
+              },
+              {
+                key: 'first_message',
+                label: 'Mesej Pertama',
+                className: 'max-w-xs',
+                render: (value) => (
+                  <span className="truncate block">{value}</span>
+                )
+              },
+              {
+                key: 'created_at',
+                label: 'Tarikh Dicipta',
+                render: (value) => (
+                  <Badge variant="outline">
+                    {new Date(value).toLocaleDateString('ms-MY')}
+                  </Badge>
+                )
+              },
+              {
+                key: 'actions',
+                label: 'Tindakan',
+                sortable: false,
+                className: 'text-right',
+                render: (_, prompt: any) => (
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(prompt)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(prompt)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                </Card>
-              ))}
-            </div>
-          </>
+                )
+              }
+            ]}
+            data={prompts}
+          />
         )}
       </CardContent>
     </Card>

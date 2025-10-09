@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Bot, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SortableTable } from '@/components/ui/sortable-table';
 
 interface Agent {
   id: string;
@@ -65,15 +66,25 @@ export function AgentsList() {
       </CardHeader>
       <CardContent>
         {agents && agents.length > 0 ? (
-          <div className="space-y-4">
-            {agents.map((agent) => (
-              <div key={agent.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                <div className="flex items-center space-x-4">
+          <SortableTable
+            columns={[
+              {
+                key: 'icon',
+                label: '',
+                sortable: false,
+                className: 'w-16',
+                render: () => (
                   <div className="p-2 bg-primary/10 rounded-full">
                     <Bot className="h-6 w-6 text-primary" />
                   </div>
+                )
+              },
+              {
+                key: 'name',
+                label: 'Name',
+                render: (value, agent: Agent) => (
                   <div>
-                    <h3 className="font-semibold text-foreground">{agent.name}</h3>
+                    <h3 className="font-semibold text-foreground">{value}</h3>
                     <div className="flex items-center space-x-2 mt-1">
                       <Badge variant="secondary" className="text-xs">
                         Voice: {agent.voice}
@@ -83,19 +94,30 @@ export function AgentsList() {
                       </Badge>
                     </div>
                   </div>
-                </div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <div className="flex items-center">
+                )
+              },
+              {
+                key: 'agent_id',
+                label: 'Agent ID',
+                render: (value) => (
+                  <span className="text-xs font-mono">
+                    {value.slice(0, 8)}...
+                  </span>
+                )
+              },
+              {
+                key: 'created_at',
+                label: 'Created',
+                render: (value) => (
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4 mr-1" />
-                    {new Date(agent.created_at).toLocaleDateString()}
+                    {new Date(value).toLocaleDateString()}
                   </div>
-                  <div className="text-xs mt-1">
-                    ID: {agent.agent_id.slice(0, 8)}...
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                )
+              }
+            ]}
+            data={agents}
+          />
         ) : (
           <div className="text-center py-8">
             <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

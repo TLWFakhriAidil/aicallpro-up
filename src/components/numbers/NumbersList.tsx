@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Phone, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SortableTable } from '@/components/ui/sortable-table';
 
 interface PhoneNumber {
   id: string;
@@ -90,34 +91,55 @@ export function NumbersList() {
       </CardHeader>
       <CardContent>
         {numbers && numbers.length > 0 ? (
-          <div className="space-y-4">
-            {numbers.map((number) => (
-              <div key={number.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                <div className="flex items-center space-x-4">
+          <SortableTable
+            columns={[
+              {
+                key: 'icon',
+                label: '',
+                sortable: false,
+                className: 'w-16',
+                render: () => (
                   <div className="p-2 bg-primary/10 rounded-full">
                     <Phone className="h-6 w-6 text-primary" />
                   </div>
+                )
+              },
+              {
+                key: 'phone_number',
+                label: 'Phone Number',
+                render: (value, number: PhoneNumber) => (
                   <div>
-                    <h3 className="font-semibold text-foreground">{number.phone_number}</h3>
+                    <h3 className="font-semibold text-foreground">{value}</h3>
                     <div className="flex items-center space-x-2 mt-1">
                       <Badge variant="secondary" className="text-xs">
                         Agent: {getAgentName(number.agent_id)}
                       </Badge>
                     </div>
                   </div>
-                </div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <div className="flex items-center">
+                )
+              },
+              {
+                key: 'phone_number_id',
+                label: 'Number ID',
+                render: (value) => (
+                  <span className="text-xs font-mono">
+                    {value.slice(0, 8)}...
+                  </span>
+                )
+              },
+              {
+                key: 'created_at',
+                label: 'Created',
+                render: (value) => (
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4 mr-1" />
-                    {new Date(number.created_at).toLocaleDateString()}
+                    {new Date(value).toLocaleDateString()}
                   </div>
-                  <div className="text-xs mt-1">
-                    ID: {number.phone_number_id.slice(0, 8)}...
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                )
+              }
+            ]}
+            data={numbers}
+          />
         ) : (
           <div className="text-center py-8">
             <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
