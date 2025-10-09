@@ -41,7 +41,7 @@ serve(async (req) => {
     
     const user = { id: userData.id, username: userData.username };
 
-    const { campaignName, promptId, phoneNumbers, customerName, retryEnabled, retryIntervalMinutes, maxRetryAttempts } = requestBody;
+    const { campaignName, promptId, phoneNumbers, customerName, retryEnabled, retryIntervalMinutes, maxRetryAttempts, idsale } = requestBody;
 
     console.log(`Starting batch call campaign: ${campaignName} for user: ${user.id}`);
 
@@ -621,6 +621,7 @@ Only respond with the JSON.`
             agent_id: responseData.assistantId || '',
             caller_number: phoneNumber,
             start_time: new Date().toISOString(),
+            idsale: idsale || null,
             metadata: {
               vapi_response: responseData,
               batch_call: true,
@@ -650,6 +651,7 @@ Only respond with the JSON.`
             agent_id: '',
             caller_number: phoneNumber,
             start_time: new Date().toISOString(),
+            idsale: idsale || null,
             metadata: {
               error: errorMessage,
               error_details: errorMessage,
