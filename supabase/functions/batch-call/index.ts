@@ -41,7 +41,7 @@ serve(async (req) => {
     
     const user = { id: userData.id, username: userData.username };
 
-    const { campaignName, promptId, phoneNumbers, customerName, retryEnabled, retryIntervalMinutes, maxRetryAttempts, idsale } = requestBody;
+    const { campaignName, promptId, phoneNumbers, phoneNumbersWithNames = [], customerName, retryEnabled, retryIntervalMinutes, maxRetryAttempts, idsale } = requestBody;
 
     console.log(`Starting batch call campaign: ${campaignName} for user: ${user.id}`);
 
@@ -328,6 +328,16 @@ serve(async (req) => {
       twilioAuthToken: phoneConfig.twilio_auth_token,
     };
 
+    // Create a map of phone numbers to customer names from the request
+    const phoneToNameMap = new Map<string, string>();
+    if (phoneNumbersWithNames && Array.isArray(phoneNumbersWithNames)) {
+      phoneNumbersWithNames.forEach((item: any) => {
+        if (item.phone_number && item.customer_name) {
+          phoneToNameMap.set(item.phone_number, item.customer_name);
+        }
+      });
+    }
+
     // Process all calls concurrently without chunking
     let successCount = 0;
     let failureCount = 0;
@@ -336,6 +346,9 @@ serve(async (req) => {
 
     // Create promises for all calls
     const callPromises = validPhones.map(async (phoneNumber) => {
+        // Get customer name from the map (passed from contacts)
+        const customerNameFromRequest = phoneToNameMap.get(phoneNumber);
+        
         // Get contact data for this phone number (outside try-catch so it's accessible in both blocks)
         const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '');
         const targetNormalized = normalizePhone(phoneNumber);
@@ -360,10 +373,11 @@ serve(async (req) => {
             let result = text;
             
             // Priority logic for customer name:
-            // 1. Use contactData.name if exists
-            // 2. Use customerName from request if contact DB doesn't have it
-            // 3. Fallback to "Cik" if both are missing or empty
-            const nameToUse = (contactData && contactData.name) || customerName || "Cik";
+            // 1. Use customerNameFromRequest (from contacts selection)
+            // 2. Use contactData.name from contacts DB
+            // 3. Use customerName from request (legacy)
+            // 4. Fallback to "Cik" if all are missing or empty
+            const nameToUse = customerNameFromRequest || (contactData && contactData.name) || customerName || "Cik";
             
             // Replace phone number variable
             result = result.replace(/\{\{CUSTOMER_PHONE_NUMBER\}\}/g, phoneNumber);
@@ -622,7 +636,7 @@ Only respond with the JSON.`
             caller_number: phoneNumber,
             start_time: new Date().toISOString(),
             idsale: idsale || null,
-            customer_name: customerName || null,
+            customer_name: customerNameFromRequest || contactData?.name || customerName || null,
             metadata: {
               vapi_response: responseData,
               batch_call: true,
@@ -653,7 +667,7 @@ Only respond with the JSON.`
             caller_number: phoneNumber,
             start_time: new Date().toISOString(),
             idsale: idsale || null,
-            customer_name: customerName || null,
+            customer_name: customerNameFromRequest || contactData?.name || customerName || null,
             metadata: {
               error: errorMessage,
               error_details: errorMessage,

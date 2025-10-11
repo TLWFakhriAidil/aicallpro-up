@@ -24,6 +24,11 @@ interface Contact {
   phone_number: string;
 }
 
+interface ContactWithNumber {
+  phone_number: string;
+  customer_name: string;
+}
+
 interface ContactBatchCallModalProps {
   open: boolean;
   onClose: () => void;
@@ -42,10 +47,15 @@ export function ContactBatchCallModal({
   const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = React.useState(false);
 
-  // Get selected contacts phone numbers
-  const selectedPhoneNumbers = contacts
+  // Get selected contacts with phone numbers and names
+  const selectedContactsData: ContactWithNumber[] = contacts
     .filter(contact => selectedContacts.includes(contact.id))
-    .map(contact => contact.phone_number);
+    .map(contact => ({
+      phone_number: contact.phone_number,
+      customer_name: contact.name
+    }));
+
+  const selectedPhoneNumbers = selectedContactsData.map(c => c.phone_number);
 
   // Use the shared batch call logic
   const {
@@ -59,6 +69,7 @@ export function ContactBatchCallModal({
     onSubmit,
   } = useBatchCall({
     predefinedNumbers: selectedPhoneNumbers,
+    contactsData: selectedContactsData,
     onSuccess: (response) => {
       onSuccess();
       onClose();

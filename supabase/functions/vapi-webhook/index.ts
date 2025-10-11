@@ -560,7 +560,11 @@ const getTwilioCost = async (supabaseClient: any, callSid: string, userId: strin
 };
 
 // Send call data to ERP system
-async function sendToERPSystem(callData: any, userId: string, supabaseClient: any) {
+async function sendToERPSystem(callData: any, userId: string | null, supabaseClient: any) {
+  if (!userId) {
+    console.log('ℹ️ No userId provided, skipping ERP webhook')
+    return
+  }
   try {
     console.log('📤 SENDING TO ERP SYSTEM:', {
       call_id: callData.call_id,

@@ -19,10 +19,16 @@ const batchCallSchema = z.object({
 
 type BatchCallFormData = z.infer<typeof batchCallSchema>;
 
+interface ContactWithNumber {
+  phone_number: string;
+  customer_name: string;
+}
+
 interface UseBatchCallOptions {
   onSuccess?: (response: any) => void;
   onError?: (error: any) => void;
   predefinedNumbers?: string[];
+  contactsData?: ContactWithNumber[];
 }
 
 export function useBatchCall(options: UseBatchCallOptions = {}) {
@@ -30,6 +36,7 @@ export function useBatchCall(options: UseBatchCallOptions = {}) {
   const [lastCampaign, setLastCampaign] = useState<any>(null);
   const [validNumbers, setValidNumbers] = useState<string[]>([]);
   const [invalidNumbers, setInvalidNumbers] = useState<string[]>([]);
+  const [contactsMap, setContactsMap] = useState<Map<string, string>>(new Map());
   const { user } = useCustomAuth();
 
   const form = useForm<BatchCallFormData>({
@@ -106,13 +113,22 @@ export function useBatchCall(options: UseBatchCallOptions = {}) {
     }
   }, [prompts, form]);
 
-  // Set predefined numbers if provided
+  // Set predefined numbers and contacts data if provided
   useEffect(() => {
     if (options.predefinedNumbers && options.predefinedNumbers.length > 0) {
       const numbersString = options.predefinedNumbers.join('\n');
       form.setValue('phoneNumbers', numbersString);
     }
-  }, [options.predefinedNumbers, form]);
+    
+    // Create a map of phone numbers to customer names
+    if (options.contactsData && options.contactsData.length > 0) {
+      const map = new Map<string, string>();
+      options.contactsData.forEach(contact => {
+        map.set(contact.phone_number, contact.customer_name);
+      });
+      setContactsMap(map);
+    }
+  }, [options.predefinedNumbers, options.contactsData, form]);
 
   // Validate phone numbers in real-time
   useEffect(() => {
@@ -164,6 +180,12 @@ export function useBatchCall(options: UseBatchCallOptions = {}) {
         toast.warning(`${invalidNumbers.length} nombor tidak sah akan diabaikan`);
       }
 
+      // Prepare phone numbers with customer names
+      const phoneNumbersWithNames = validNumbers.map(phone => ({
+        phone_number: phone,
+        customer_name: contactsMap.get(phone) || null
+      }));
+
       // Call the batch-call edge function
       const { data: response, error } = await supabase.functions.invoke('batch-call', {
         body: {
@@ -171,6 +193,7 @@ export function useBatchCall(options: UseBatchCallOptions = {}) {
           campaignName: data.campaignName,
           promptId: data.promptId,
           phoneNumbers: validNumbers,
+          phoneNumbersWithNames: phoneNumbersWithNames,
           concurrentLimit: 10, // Fixed default value
           retryEnabled: data.retryEnabled,
           retryIntervalMinutes: data.retryIntervalMinutes,
