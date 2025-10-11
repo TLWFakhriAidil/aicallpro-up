@@ -622,6 +622,7 @@ Only respond with the JSON.`
             caller_number: phoneNumber,
             start_time: new Date().toISOString(),
             idsale: idsale || null,
+            customer_name: customerName || null,
             metadata: {
               vapi_response: responseData,
               batch_call: true,
@@ -652,6 +653,7 @@ Only respond with the JSON.`
             caller_number: phoneNumber,
             start_time: new Date().toISOString(),
             idsale: idsale || null,
+            customer_name: customerName || null,
             metadata: {
               error: errorMessage,
               error_details: errorMessage,

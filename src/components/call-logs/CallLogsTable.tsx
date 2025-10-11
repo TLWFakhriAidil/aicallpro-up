@@ -33,6 +33,7 @@ interface CallLog {
   updated_at: string;
   end_of_call_report?: any;
   captured_data?: Record<string, any>;
+  customer_name?: string;
   metadata?: {
     recording_url?: string;
     transcript?: string;
@@ -255,7 +256,7 @@ export function CallLogsTable() {
 
   const filteredLogs = callLogs?.filter(log => {
     const searchLower = filters.search.toLowerCase();
-    const customerName = ((log as any).contacts?.name || '').toLowerCase();
+    const customerName = (log.customer_name || (log as any).contacts?.name || '').toLowerCase();
     const matchesSearch = (
       log.caller_number.toLowerCase().includes(searchLower) ||
       getPromptName(log).toLowerCase().includes(searchLower) ||
@@ -619,7 +620,7 @@ export function CallLogsTable() {
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {(log as any).contacts?.name || '-'}
+                      {log.customer_name || (log as any).contacts?.name || '-'}
                     </TableCell>
                     <TableCell className="font-medium">
                       {log.caller_number || 'Unknown'}
@@ -722,7 +723,8 @@ export function CallLogsTable() {
                         </span>
                         {getStatusBadge(log.status)}
                       </div>
-                      <h3 className="font-semibold text-sm">{log.caller_number || 'Unknown'}</h3>
+                      <h3 className="font-semibold text-sm">{log.customer_name || (log as any).contacts?.name || 'Unknown'}</h3>
+                      <p className="text-xs text-muted-foreground">Phone: {log.caller_number}</p>
                       <p className="text-xs text-muted-foreground">{getPromptName(log)}</p>
                       <p className="text-xs text-primary font-medium">Stage: {log.stage_reached || log.metadata?.stage_reached || '-'}</p>
                     </div>

@@ -92,6 +92,7 @@ export type Database = {
           captured_data: Json | null
           contact_id: string | null
           created_at: string
+          customer_name: string | null
           duration: number | null
           end_of_call_report: Json | null
           id: string
@@ -116,6 +117,7 @@ export type Database = {
           captured_data?: Json | null
           contact_id?: string | null
           created_at?: string
+          customer_name?: string | null
           duration?: number | null
           end_of_call_report?: Json | null
           id?: string
@@ -140,6 +142,7 @@ export type Database = {
           captured_data?: Json | null
           contact_id?: string | null
           created_at?: string
+          customer_name?: string | null
           duration?: number | null
           end_of_call_report?: Json | null
           id?: string
