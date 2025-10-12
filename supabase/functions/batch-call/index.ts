@@ -53,7 +53,8 @@ serve(async (req) => {
       idsale,
       isRetry = false,
       parentCallId = null,
-      currentRetryCount = 0
+      currentRetryCount = 0,
+      reuseCampaignId = null
     } = requestBody;
 
     console.log(`Starting batch call campaign: ${campaignName} for user: ${user.id}`);
@@ -235,29 +236,38 @@ serve(async (req) => {
       throw new Error('No valid phone numbers provided');
     }
 
-    // Create campaign record with retry settings
-    const { data: campaign, error: campaignError } = await supabaseAdmin
-      .from('campaigns')
-      .insert({
-        user_id: user.id,
-        campaign_name: campaignName,
-        prompt_id: prompt.id,
-        status: 'in_progress',
-        total_numbers: validPhones.length,
-        retry_enabled: retryEnabled || false,
-        retry_interval_minutes: retryIntervalMinutes || 30,
-        max_retry_attempts: maxRetryAttempts || 3,
-        current_retry_count: 0
-      })
-      .select()
-      .single();
+    // Use existing campaign for retries if provided, otherwise create a new one
+    let campaign: { id: string };
+    let createdNewCampaign = false;
 
-    if (campaignError) {
-      throw new Error('Failed to create campaign: ' + campaignError.message);
+    if (isRetry && reuseCampaignId) {
+      campaign = { id: reuseCampaignId } as { id: string };
+      console.log(`Reusing existing campaign ${reuseCampaignId} for retry`);
+    } else {
+      const { data: newCampaign, error: campaignError } = await supabaseAdmin
+        .from('campaigns')
+        .insert({
+          user_id: user.id,
+          campaign_name: campaignName,
+          prompt_id: prompt.id,
+          status: 'in_progress',
+          total_numbers: validPhones.length,
+          retry_enabled: retryEnabled || false,
+          retry_interval_minutes: retryIntervalMinutes || 30,
+          max_retry_attempts: maxRetryAttempts || 3,
+          current_retry_count: 0
+        })
+        .select()
+        .single();
+
+      if (campaignError) {
+        throw new Error('Failed to create campaign: ' + campaignError.message);
+      }
+
+      campaign = { id: newCampaign.id };
+      createdNewCampaign = true;
+      console.log(`Created campaign ${campaign.id} with ${validPhones.length} valid numbers`);
     }
-
-    console.log(`Created campaign ${campaign.id} with ${validPhones.length} valid numbers`);
-
     // Full assistant configuration (from your PHP code)
     const assistantConfig = {
       name: 'AI Batch Call Agent',
@@ -732,16 +742,17 @@ Only respond with the JSON.`
 
     console.log(`All calls completed: ${successCount} successful, ${failureCount} failed`);
 
-    // Update campaign status
-    await supabaseAdmin
-      .from('campaigns')
-      .update({
-        status: 'completed',
-        successful_calls: successCount,
-        failed_calls: failureCount
-      })
-      .eq('id', campaign.id);
-
+    // Update campaign status only when a new campaign was created in this invocation
+    if (createdNewCampaign) {
+      await supabaseAdmin
+        .from('campaigns')
+        .update({
+          status: 'completed',
+          successful_calls: successCount,
+          failed_calls: failureCount
+        })
+        .eq('id', campaign.id);
+    }
     console.log(`Batch call completed. Success: ${successCount}, Failed: ${failureCount}`);
 
     return new Response(JSON.stringify({

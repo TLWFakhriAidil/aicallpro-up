@@ -108,7 +108,8 @@ serve(async (req) => {
             maxRetryAttempts: call.max_retry_attempts,
             isRetry: true,
             parentCallId: call.id,
-            currentRetryCount: call.retry_count + 1
+            currentRetryCount: call.retry_count + 1,
+            reuseCampaignId: call.campaign_id
           }
         });
 
