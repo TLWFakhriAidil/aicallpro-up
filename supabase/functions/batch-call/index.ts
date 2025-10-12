@@ -636,8 +636,8 @@ Only respond with the JSON.`
             assistant_id: responseData.assistantId
           });
 
-          // Calculate next retry time if retry is enabled and call is not answered
-          const nextRetryAt = (retryEnabled && responseData.status !== 'answered') 
+          // Calculate next retry time - only for original calls, not for retry calls
+          const nextRetryAt = (!isRetry && retryEnabled && responseData.status !== 'answered') 
             ? new Date(Date.now() + (retryIntervalMinutes || 360) * 60 * 1000).toISOString()
             : null;
 
@@ -658,7 +658,7 @@ Only respond with the JSON.`
             is_retry: isRetry,
             retry_count: currentRetryCount,
             parent_call_id: parentCallId,
-            retry_enabled: retryEnabled || false,
+            retry_enabled: isRetry ? false : (retryEnabled || false), // Retry calls should NOT be retryable
             retry_interval_minutes: retryIntervalMinutes || 360,
             max_retry_attempts: maxRetryAttempts || 3,
             next_retry_at: nextRetryAt,
@@ -701,7 +701,7 @@ Only respond with the JSON.`
             start_time: new Date().toISOString(),
             idsale: idsale || null,
             customer_name: customerNameFromRequest || contactData?.name || customerName || null,
-            retry_enabled: retryEnabled || false,
+            retry_enabled: isRetry ? false : (retryEnabled || false), // Retry calls should NOT be retryable
             retry_interval_minutes: retryIntervalMinutes || 360,
             max_retry_attempts: maxRetryAttempts || 3,
             next_retry_at: nextRetryAt,
