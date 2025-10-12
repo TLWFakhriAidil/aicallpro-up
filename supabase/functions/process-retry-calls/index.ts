@@ -121,15 +121,27 @@ serve(async (req) => {
         console.log(`✅ Successfully initiated retry for ${call.phone_number}`);
         totalRetriedCalls++;
 
-        // Update the original call's last_retry_at and next_retry_at
-        const nextRetryTime = new Date(Date.now() + call.retry_interval_minutes * 60 * 1000).toISOString();
-        await supabaseAdmin
+        // Update original call: increment retry_count, set timestamps, disable retry when done
+        const newRetryCount = (call.retry_count || 0) + 1;
+        const nextRetryTime = newRetryCount < call.max_retry_attempts
+          ? new Date(Date.now() + call.retry_interval_minutes * 60 * 1000).toISOString()
+          : null;
+
+        const { error: updateErr } = await supabaseAdmin
           .from('call_logs')
           .update({
+            retry_count: newRetryCount,
             last_retry_at: new Date().toISOString(),
-            next_retry_at: (call.retry_count + 1) < call.max_retry_attempts ? nextRetryTime : null
+            next_retry_at: nextRetryTime,
+            ...(nextRetryTime === null ? { retry_enabled: false } : {})
           })
           .eq('id', call.id);
+
+        if (updateErr) {
+          console.error(`Failed to update retry counters for call ${call.id}:`, updateErr);
+        } else {
+          console.log(`Retry counters updated for ${call.phone_number}: ${newRetryCount}/${call.max_retry_attempts}`);
+        }
 
       } catch (error) {
         console.error(`Error processing retry for call ${call.id}:`, error);
