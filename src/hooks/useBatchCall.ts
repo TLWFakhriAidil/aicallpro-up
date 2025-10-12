@@ -13,7 +13,7 @@ const batchCallSchema = z.object({
   promptId: z.string().min(1, "Sila pilih prompt"),
   phoneNumbers: z.string().min(1, "Senarai nombor telefon diperlukan"),
   retryEnabled: z.boolean().default(false),
-  retryIntervalMinutes: z.number().min(30).max(1440).default(360),
+  retryIntervalMinutes: z.number().min(1).max(1440).default(360),
   maxRetryAttempts: z.number().min(1).max(10).default(3),
 });
 

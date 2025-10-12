@@ -267,7 +267,7 @@ export function BatchCallForm() {
                               <FormControl>
                                 <Input 
                                   type="number" 
-                                  min={30}
+                                  min={1}
                                   max={1440}
                                   placeholder="360"
                                   {...field}

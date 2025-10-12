@@ -248,14 +248,14 @@ export function ContactBatchCallModal({
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Berapa minit nak tunggu sebelum call balik (30-1440 minit)</p>
+                                    <p>Berapa minit nak tunggu sebelum call balik (1-1440 minit)</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
-                                  min={30}
+                                  min={1}
                                   max={1440}
                                   placeholder="360"
                                   {...field}
