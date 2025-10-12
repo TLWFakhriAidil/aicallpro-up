@@ -216,12 +216,12 @@ export function BatchCallForm() {
                   )}
                 />
 
-                {/* Auto Retry Configuration - Hidden */}
-                {/* <Card>
+                {/* Auto Retry Configuration */}
+                <Card>
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
                       <RefreshCw className="h-4 w-4" />
-                      Auto Retry Configuration
+                      Konfigurasi Auto Retry
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -231,9 +231,9 @@ export function BatchCallForm() {
                       render={({ field }) => (
                         <FormItem className="flex items-center justify-between space-y-0">
                           <div className="space-y-0.5">
-                            <FormLabel>Enable Auto Retry</FormLabel>
+                            <FormLabel>Aktifkan Auto Retry</FormLabel>
                             <div className="text-sm text-muted-foreground">
-                              Automatically call back numbers that didn't answer
+                              Call balik secara automatik untuk nombor yang tak angkat
                             </div>
                           </div>
                           <FormControl>
@@ -254,26 +254,29 @@ export function BatchCallForm() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="flex items-center gap-2">
-                                Retry Interval (Minutes)
+                                Jarak Masa Retry (Minit)
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Berapa minit nak tunggu sebelum call balik (5-1440 minit)</p>
+                                    <p>Berapa minit nak tunggu sebelum call balik. Default: 360 minit (6 jam)</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
-                                  min={5}
+                                  min={30}
                                   max={1440}
-                                  placeholder="30"
+                                  placeholder="360"
                                   {...field}
                                   onChange={(e) => field.onChange(parseInt(e.target.value))}
                                 />
                               </FormControl>
+                              <div className="text-xs text-muted-foreground">
+                                360 minit = 6 jam, 720 minit = 12 jam
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -285,13 +288,13 @@ export function BatchCallForm() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="flex items-center gap-2">
-                                Max Retry Attempts
+                                Jumlah Cubaan Retry
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Berapa kali nak cuba call balik (1-10 kali)</p>
+                                    <p>Berapa kali nak cuba call balik. Default: 3 kali</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </FormLabel>
@@ -305,6 +308,9 @@ export function BatchCallForm() {
                                   onChange={(e) => field.onChange(parseInt(e.target.value))}
                                 />
                               </FormControl>
+                              <div className="text-xs text-muted-foreground">
+                                Jika 3 kali retry, total call = 4 (1 asal + 3 retry)
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -312,7 +318,7 @@ export function BatchCallForm() {
                       </>
                     )}
                   </CardContent>
-                </Card> */}
+                </Card>
 
                 <Button
                   type="submit"

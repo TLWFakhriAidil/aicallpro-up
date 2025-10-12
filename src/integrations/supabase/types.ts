@@ -100,6 +100,7 @@ export type Database = {
           is_retry: boolean | null
           metadata: Json | null
           original_campaign_id: string | null
+          parent_call_id: string | null
           phone_number: string | null
           retry_count: number | null
           stage_reached: string | null
@@ -125,6 +126,7 @@ export type Database = {
           is_retry?: boolean | null
           metadata?: Json | null
           original_campaign_id?: string | null
+          parent_call_id?: string | null
           phone_number?: string | null
           retry_count?: number | null
           stage_reached?: string | null
@@ -150,6 +152,7 @@ export type Database = {
           is_retry?: boolean | null
           metadata?: Json | null
           original_campaign_id?: string | null
+          parent_call_id?: string | null
           phone_number?: string | null
           retry_count?: number | null
           stage_reached?: string | null
@@ -172,6 +175,13 @@ export type Database = {
             columns: ["original_campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_logs_parent_call_id_fkey"
+            columns: ["parent_call_id"]
+            isOneToOne: false
+            referencedRelation: "call_logs"
             referencedColumns: ["id"]
           },
         ]

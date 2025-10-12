@@ -13,7 +13,7 @@ const batchCallSchema = z.object({
   promptId: z.string().min(1, "Sila pilih prompt"),
   phoneNumbers: z.string().min(1, "Senarai nombor telefon diperlukan"),
   retryEnabled: z.boolean().default(false),
-  retryIntervalMinutes: z.number().min(5).max(1440).default(30),
+  retryIntervalMinutes: z.number().min(30).max(1440).default(360),
   maxRetryAttempts: z.number().min(1).max(10).default(3),
 });
 
@@ -46,7 +46,7 @@ export function useBatchCall(options: UseBatchCallOptions = {}) {
       promptId: "",
       phoneNumbers: "",
       retryEnabled: false,
-      retryIntervalMinutes: 30,
+      retryIntervalMinutes: 360,
       maxRetryAttempts: 3,
     },
   });

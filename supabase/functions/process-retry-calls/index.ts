@@ -18,29 +18,24 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Starting retry processing job...');
+    console.log('Starting auto-retry processing job...');
 
-    // Find campaigns eligible for retry
-    const { data: allCampaigns, error: campaignsError } = await supabaseAdmin
+    // Find all campaigns with retry enabled
+    const { data: campaigns, error: campaignsError } = await supabaseAdmin
       .from('campaigns')
-      .select('*')
-      .eq('status', 'completed')
-      .eq('retry_enabled', true)
-      .order('updated_at', { ascending: true });
+      .select('id, user_id, campaign_name, prompt_id, retry_interval_minutes, max_retry_attempts')
+      .eq('retry_enabled', true);
     
     if (campaignsError) {
       console.error('Error fetching campaigns:', campaignsError);
       throw campaignsError;
     }
-    
-    // Filter campaigns where current_retry_count < max_retry_attempts
-    const campaignsToRetry = allCampaigns?.filter(c => c.current_retry_count < c.max_retry_attempts) || [];
 
-    if (!campaignsToRetry || campaignsToRetry.length === 0) {
-      console.log('No campaigns found for retry');
+    if (!campaigns || campaigns.length === 0) {
+      console.log('No campaigns with retry enabled');
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'No campaigns to retry',
+        message: 'No campaigns with retry enabled',
         processed: 0 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -48,119 +43,100 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Found ${campaignsToRetry.length} campaigns for potential retry`);
+    console.log(`Found ${campaigns.length} campaigns with retry enabled`);
 
-    let processedCount = 0;
-    let retriedCallsCount = 0;
+    let totalRetriedCalls = 0;
+    const now = new Date();
 
-    for (const campaign of campaignsToRetry) {
-      // Check if enough time has passed since last update
-      const lastUpdated = new Date(campaign.updated_at);
-      const now = new Date();
-      const minutesSinceUpdate = (now.getTime() - lastUpdated.getTime()) / (1000 * 60);
-
-      if (minutesSinceUpdate < campaign.retry_interval_minutes) {
-        console.log(`Campaign ${campaign.id} not ready for retry yet. Minutes since update: ${minutesSinceUpdate}`);
-        continue;
-      }
-
-      console.log(`Processing retry for campaign: ${campaign.campaign_name} (${campaign.id})`);
-
-      // Get failed/unanswered calls from this campaign
+    for (const campaign of campaigns) {
+      console.log(`\n=== Processing campaign: ${campaign.campaign_name} (${campaign.id}) ===`);
+      
+      // Find failed calls that need retry
       const { data: failedCalls, error: callsError } = await supabaseAdmin
         .from('call_logs')
-        .select('phone_number, contact_id')
+        .select('id, phone_number, customer_name, retry_count, created_at, campaign_id')
         .eq('campaign_id', campaign.id)
-        .neq('status', 'answered'); // Get all calls that didn't result in answered status
+        .neq('status', 'answered')
+        .lt('retry_count', campaign.max_retry_attempts);
 
       if (callsError) {
-        console.error(`Error fetching failed calls for campaign ${campaign.id}:`, callsError);
+        console.error(`Error fetching calls for campaign ${campaign.id}:`, callsError);
         continue;
       }
 
       if (!failedCalls || failedCalls.length === 0) {
-        console.log(`No failed calls found for campaign ${campaign.id}`);
-        // Mark campaign as completed with retries done
-        await supabaseAdmin
-          .from('campaigns')
-          .update({ 
-            current_retry_count: campaign.max_retry_attempts,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', campaign.id);
+        console.log(`No failed calls eligible for retry in campaign ${campaign.id}`);
         continue;
       }
 
-      console.log(`Found ${failedCalls.length} failed calls for campaign ${campaign.id}`);
+      console.log(`Found ${failedCalls.length} failed calls to check for retry`);
 
-      // Get unique phone numbers to retry
-      const phoneNumbersToRetry = [...new Set(failedCalls.map(call => call.phone_number))];
+      // Filter calls that are ready for retry (based on time interval)
+      const callsToRetry = failedCalls.filter(call => {
+        const callTime = new Date(call.created_at);
+        const minutesSinceCall = (now.getTime() - callTime.getTime()) / (1000 * 60);
+        const isReady = minutesSinceCall >= campaign.retry_interval_minutes;
+        
+        if (isReady) {
+          console.log(`Call ${call.id} ready for retry - ${minutesSinceCall.toFixed(0)} minutes since last attempt`);
+        }
+        
+        return isReady;
+      });
 
-      // Get user session for authentication
-      const { data: userSession, error: sessionError } = await supabaseAdmin
-        .from('user_sessions')
-        .select('session_token')
-        .eq('user_id', campaign.user_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (sessionError || !userSession) {
-        console.error(`No active session found for user ${campaign.user_id}`);
+      if (callsToRetry.length === 0) {
+        console.log(`No calls ready for retry yet in campaign ${campaign.id}`);
         continue;
       }
 
-      // Call the batch-call function to retry these numbers
-      try {
-        const retryResponse = await fetch(
-          `${Deno.env.get('SUPABASE_URL')}/functions/v1/batch-call`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${userSession.session_token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              campaignName: `${campaign.campaign_name} (Retry ${campaign.current_retry_count + 1})`,
+      console.log(`${callsToRetry.length} calls ready for retry`);
+
+      // Process each call individually
+      for (const call of callsToRetry) {
+        try {
+          console.log(`Retrying call to ${call.phone_number} (attempt ${call.retry_count + 1}/${campaign.max_retry_attempts})`);
+          
+          // Use the batch-call function to make the retry call
+          const { data: response, error: callError } = await supabaseAdmin.functions.invoke('batch-call', {
+            body: {
+              userId: campaign.user_id,
+              campaignName: `${campaign.campaign_name} (Auto Retry ${call.retry_count + 1})`,
               promptId: campaign.prompt_id,
-              phoneNumbers: phoneNumbersToRetry,
-              retryEnabled: campaign.current_retry_count + 1 < campaign.max_retry_attempts,
+              phoneNumbers: [call.phone_number],
+              phoneNumbersWithNames: call.customer_name ? [{
+                phone_number: call.phone_number,
+                customer_name: call.customer_name
+              }] : [],
+              retryEnabled: true,
               retryIntervalMinutes: campaign.retry_interval_minutes,
               maxRetryAttempts: campaign.max_retry_attempts,
-            }),
-          }
-        );
+              isRetry: true,
+              parentCallId: call.id,
+              currentRetryCount: call.retry_count + 1
+            }
+          });
 
-        if (retryResponse.ok) {
-          console.log(`Successfully initiated retry for campaign ${campaign.id}`);
-          retriedCallsCount += phoneNumbersToRetry.length;
-          
-          // Update original campaign retry count
-          await supabaseAdmin
-            .from('campaigns')
-            .update({ 
-              current_retry_count: campaign.current_retry_count + 1,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', campaign.id);
-          
-          processedCount++;
-        } else {
-          const errorText = await retryResponse.text();
-          console.error(`Failed to retry campaign ${campaign.id}:`, errorText);
+          if (callError) {
+            console.error(`Error retrying call ${call.id}:`, callError);
+            continue;
+          }
+
+          console.log(`✅ Successfully initiated retry for ${call.phone_number}`);
+          totalRetriedCalls++;
+
+        } catch (error) {
+          console.error(`Error processing retry for call ${call.id}:`, error);
         }
-      } catch (error) {
-        console.error(`Error retrying campaign ${campaign.id}:`, error);
       }
     }
 
-    console.log(`Retry processing completed. Processed ${processedCount} campaigns, retried ${retriedCallsCount} calls`);
+    console.log(`\n=== Retry processing completed ===`);
+    console.log(`Total calls retried: ${totalRetriedCalls}`);
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Retry processing completed',
-      processed: processedCount,
-      retriedCalls: retriedCallsCount
+      message: 'Auto-retry processing completed',
+      retriedCalls: totalRetriedCalls
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
