@@ -4,7 +4,9 @@ import { useCustomAuth } from "@/contexts/CustomAuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, BarChart3, Calendar, Users, Phone, Plus, ChevronUp, ChevronDown } from "lucide-react";
+import { Eye, BarChart3, Calendar, Users, Phone, Plus, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { useState, useMemo } from "react";
 import { CampaignDetails } from "./CampaignDetails";
 import { CampaignFilters, CampaignFilters as CampaignFiltersType } from "./CampaignFilters";
@@ -28,6 +30,29 @@ export function CampaignsList() {
   });
   const itemsPerPage = 10;
   const { user } = useCustomAuth();
+
+  const handleRetryToggle = async (campaignId: string, currentRetryEnabled: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .update({ retry_enabled: !currentRetryEnabled })
+        .eq('id', campaignId);
+
+      if (error) throw error;
+
+      toast.success(
+        !currentRetryEnabled 
+          ? "Auto retry diaktifkan untuk kempen ini" 
+          : "Auto retry dinyahaktifkan untuk kempen ini"
+      );
+      
+      // Refetch campaigns to update the UI
+      window.location.reload();
+    } catch (error) {
+      console.error('Error toggling retry:', error);
+      toast.error("Gagal mengemas kini tetapan retry");
+    }
+  };
 
   const { data: campaignsData, isLoading } = useQuery({
     queryKey: ["campaigns", user?.id, filters],
@@ -254,6 +279,7 @@ export function CampaignsList() {
                         )}
                       </Button>
                     </TableHead>
+                    <TableHead className="text-center">Auto Retry</TableHead>
                     <TableHead className="text-right">Tindakan</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -299,6 +325,20 @@ export function CampaignsList() {
                                 minute: '2-digit'
                               })}
                             </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-2">
+                            <Switch
+                              checked={campaign.retry_enabled || false}
+                              onCheckedChange={() => handleRetryToggle(campaign.id, campaign.retry_enabled || false)}
+                            />
+                            {campaign.retry_enabled && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <RefreshCw className="h-3 w-3" />
+                                <span>{campaign.retry_interval_minutes}m / {campaign.max_retry_attempts}x</span>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
@@ -376,6 +416,21 @@ export function CampaignsList() {
                             day: 'numeric'
                           })}
                         </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Auto Retry:</span>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={campaign.retry_enabled || false}
+                          onCheckedChange={() => handleRetryToggle(campaign.id, campaign.retry_enabled || false)}
+                        />
+                        {campaign.retry_enabled && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <RefreshCw className="h-3 w-3" />
+                            <span>{campaign.retry_interval_minutes}m / {campaign.max_retry_attempts}x</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

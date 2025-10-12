@@ -204,12 +204,12 @@ export function ContactBatchCallModal({
                   )}
                 />
 
-                {/* Auto Retry Configuration - Hidden */}
-                {/* <Card>
+                {/* Auto Retry Configuration */}
+                <Card>
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
                       <RefreshCw className="h-4 w-4" />
-                      Auto Retry Configuration
+                      Konfigurasi Auto Retry
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -219,9 +219,9 @@ export function ContactBatchCallModal({
                       render={({ field }) => (
                         <FormItem className="flex items-center justify-between space-y-0">
                           <div className="space-y-0.5">
-                            <FormLabel>Enable Auto Retry</FormLabel>
+                            <FormLabel>Aktifkan Auto Retry</FormLabel>
                             <div className="text-sm text-muted-foreground">
-                              Automatically call back numbers that didn't answer
+                              Automatically call balik nombor yang tak angkat
                             </div>
                           </div>
                           <FormControl>
@@ -242,22 +242,22 @@ export function ContactBatchCallModal({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="flex items-center gap-2">
-                                Retry Interval (Minutes)
+                                Jarak Masa Retry (Minit)
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Berapa minit nak tunggu sebelum call balik (5-1440 minit)</p>
+                                    <p>Berapa minit nak tunggu sebelum call balik (30-1440 minit)</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
-                                  min={5}
+                                  min={30}
                                   max={1440}
-                                  placeholder="30"
+                                  placeholder="360"
                                   {...field}
                                   onChange={(e) => field.onChange(parseInt(e.target.value))}
                                 />
@@ -273,7 +273,7 @@ export function ContactBatchCallModal({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="flex items-center gap-2">
-                                Max Retry Attempts
+                                Jumlah Cubaan Retry
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
@@ -300,7 +300,7 @@ export function ContactBatchCallModal({
                       </>
                     )}
                   </CardContent>
-                </Card> */}
+                </Card>
 
                 {/* Selected Contacts Preview */}
                 <Card>
