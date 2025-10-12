@@ -636,6 +636,11 @@ Only respond with the JSON.`
             assistant_id: responseData.assistantId
           });
 
+          // Calculate next retry time if retry is enabled and call is not answered
+          const nextRetryAt = (retryEnabled && responseData.status !== 'answered') 
+            ? new Date(Date.now() + (retryIntervalMinutes || 360) * 60 * 1000).toISOString()
+            : null;
+
           // Log successful call
           await supabaseAdmin.from('call_logs').insert({
             campaign_id: campaign.id,
@@ -656,6 +661,7 @@ Only respond with the JSON.`
             retry_enabled: retryEnabled || false,
             retry_interval_minutes: retryIntervalMinutes || 360,
             max_retry_attempts: maxRetryAttempts || 3,
+            next_retry_at: nextRetryAt,
             metadata: {
               vapi_response: responseData,
               batch_call: true,
@@ -674,6 +680,11 @@ Only respond with the JSON.`
           const errorMessage = error instanceof Error ? error.message : String(error);
           console.error(`Failed to call ${phoneNumber}:`, errorMessage);
           
+          // Calculate next retry time if retry is enabled
+          const nextRetryAt = retryEnabled 
+            ? new Date(Date.now() + (retryIntervalMinutes || 360) * 60 * 1000).toISOString()
+            : null;
+
           // Log failed call with detailed error info
           await supabaseAdmin.from('call_logs').insert({
             campaign_id: campaign.id,
@@ -693,6 +704,7 @@ Only respond with the JSON.`
             retry_enabled: retryEnabled || false,
             retry_interval_minutes: retryIntervalMinutes || 360,
             max_retry_attempts: maxRetryAttempts || 3,
+            next_retry_at: nextRetryAt,
             metadata: {
               error: errorMessage,
               error_details: errorMessage,

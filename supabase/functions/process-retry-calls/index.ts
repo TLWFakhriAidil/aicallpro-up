@@ -20,12 +20,14 @@ serve(async (req) => {
 
     console.log('Starting auto-retry processing job...');
 
-    // Find all failed calls with retry enabled
+    // Find calls ready for retry based on scheduled next_retry_at time
     const { data: failedCalls, error: callsError } = await supabaseAdmin
       .from('call_logs')
-      .select('id, phone_number, customer_name, retry_count, created_at, campaign_id, user_id, retry_interval_minutes, max_retry_attempts')
+      .select('id, phone_number, customer_name, retry_count, created_at, campaign_id, user_id, retry_interval_minutes, max_retry_attempts, next_retry_at')
       .eq('retry_enabled', true)
-      .neq('status', 'answered');
+      .neq('status', 'answered')
+      .not('next_retry_at', 'is', null)
+      .lte('next_retry_at', new Date().toISOString());
     
     if (callsError) {
       console.error('Error fetching calls:', callsError);
@@ -33,10 +35,10 @@ serve(async (req) => {
     }
 
     if (!failedCalls || failedCalls.length === 0) {
-      console.log('No calls with retry enabled found');
+      console.log('No calls scheduled for retry at this time');
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'No calls with retry enabled',
+        message: 'No calls scheduled for retry at this time',
         processed: 0 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -44,35 +46,26 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Found ${failedCalls.length} calls with retry enabled`);
+    console.log(`Found ${failedCalls.length} calls scheduled for retry`);
 
     let totalRetriedCalls = 0;
-    const now = new Date();
 
-    // Filter calls that are ready for retry and haven't exceeded max attempts
+    // Filter calls that haven't exceeded max attempts
     const callsToRetry = failedCalls.filter(call => {
-      // Check if max retry attempts reached
       if (call.retry_count >= call.max_retry_attempts) {
+        console.log(`Call ${call.id} has reached max retry attempts (${call.max_retry_attempts})`);
         return false;
       }
-
-      // Check if enough time has passed
-      const callTime = new Date(call.created_at);
-      const minutesSinceCall = (now.getTime() - callTime.getTime()) / (1000 * 60);
-      const isReady = minutesSinceCall >= call.retry_interval_minutes;
       
-      if (isReady) {
-        console.log(`Call ${call.id} ready for retry - ${minutesSinceCall.toFixed(0)} minutes since last attempt (waiting for ${call.retry_interval_minutes} minutes)`);
-      }
-      
-      return isReady;
+      console.log(`Call ${call.id} scheduled for retry at ${call.next_retry_at} (attempt ${call.retry_count + 1}/${call.max_retry_attempts})`);
+      return true;
     });
 
     if (callsToRetry.length === 0) {
-      console.log('No calls ready for retry yet');
+      console.log('All scheduled calls have exceeded max retry attempts');
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'No calls ready for retry yet',
+        message: 'All scheduled calls have exceeded max retry attempts',
         processed: 0 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -80,7 +73,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`${callsToRetry.length} calls ready for retry`);
+    console.log(`${callsToRetry.length} calls will be retried`);
 
     // Process each call individually
     for (const call of callsToRetry) {
@@ -126,6 +119,16 @@ serve(async (req) => {
 
         console.log(`✅ Successfully initiated retry for ${call.phone_number}`);
         totalRetriedCalls++;
+
+        // Update the original call's last_retry_at and next_retry_at
+        const nextRetryTime = new Date(Date.now() + call.retry_interval_minutes * 60 * 1000).toISOString();
+        await supabaseAdmin
+          .from('call_logs')
+          .update({
+            last_retry_at: new Date().toISOString(),
+            next_retry_at: (call.retry_count + 1) < call.max_retry_attempts ? nextRetryTime : null
+          })
+          .eq('id', call.id);
 
       } catch (error) {
         console.error(`Error processing retry for call ${call.id}:`, error);

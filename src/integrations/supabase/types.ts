@@ -98,8 +98,10 @@ export type Database = {
           id: string
           idsale: string | null
           is_retry: boolean | null
+          last_retry_at: string | null
           max_retry_attempts: number | null
           metadata: Json | null
+          next_retry_at: string | null
           original_campaign_id: string | null
           parent_call_id: string | null
           phone_number: string | null
@@ -127,8 +129,10 @@ export type Database = {
           id?: string
           idsale?: string | null
           is_retry?: boolean | null
+          last_retry_at?: string | null
           max_retry_attempts?: number | null
           metadata?: Json | null
+          next_retry_at?: string | null
           original_campaign_id?: string | null
           parent_call_id?: string | null
           phone_number?: string | null
@@ -156,8 +160,10 @@ export type Database = {
           id?: string
           idsale?: string | null
           is_retry?: boolean | null
+          last_retry_at?: string | null
           max_retry_attempts?: number | null
           metadata?: Json | null
+          next_retry_at?: string | null
           original_campaign_id?: string | null
           parent_call_id?: string | null
           phone_number?: string | null
