@@ -15,6 +15,7 @@ import { AudioPlayerDialog } from '@/components/ui/audio-player-dialog';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { CallLogsFilters, CallLogsFilters as CallLogsFiltersType } from './CallLogsFilters';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface CallLog {
   id: string;
@@ -73,6 +74,8 @@ export function CallLogsTable() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [selectedLogs, setSelectedLogs] = useState<string[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   // Get call logs from Supabase
   const { data: callLogs, isLoading, error } = useQuery({
@@ -147,6 +150,86 @@ export function CallLogsTable() {
     enabled: !!user,
   });
 
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (callLogIds: string[]) => {
+      const results = [];
+      
+      for (const callLogId of callLogIds) {
+        try {
+          const { data: callLog } = await supabase
+            .from('call_logs')
+            .select('campaign_id, status')
+            .eq('id', callLogId)
+            .single();
+
+          const { error } = await supabase
+            .from('call_logs')
+            .delete()
+            .eq('id', callLogId)
+            .eq('user_id', user?.id || '');
+          
+          if (error) throw error;
+
+          if (callLog?.campaign_id) {
+            const isSuccessful = ['completed', 'ended', 'answered'].includes(callLog.status);
+            const isFailed = ['failed', 'cancelled'].includes(callLog.status);
+
+            const { data: campaign } = await supabase
+              .from('campaigns')
+              .select('successful_calls, failed_calls, total_numbers')
+              .eq('id', callLog.campaign_id)
+              .single();
+
+            if (campaign) {
+              const updates: any = {
+                total_numbers: Math.max(0, (campaign.total_numbers || 0) - 1)
+              };
+
+              if (isSuccessful) {
+                updates.successful_calls = Math.max(0, (campaign.successful_calls || 0) - 1);
+              } else if (isFailed) {
+                updates.failed_calls = Math.max(0, (campaign.failed_calls || 0) - 1);
+              }
+
+              await supabase
+                .from('campaigns')
+                .update(updates)
+                .eq('id', callLog.campaign_id);
+            }
+          }
+          
+          results.push({ id: callLogId, success: true });
+        } catch (error) {
+          results.push({ id: callLogId, success: false, error });
+        }
+      }
+      
+      return results;
+    },
+    onSuccess: (results) => {
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+      
+      queryClient.invalidateQueries({ queryKey: ['call-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      setSelectedLogs([]);
+      setShowBulkDeleteDialog(false);
+      
+      toast({
+        title: "Bulk delete completed",
+        description: `Successfully deleted ${successCount} call log(s)${failCount > 0 ? `. ${failCount} failed.` : '.'}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete call logs: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -283,6 +366,27 @@ export function CallLogsTable() {
 
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  const toggleSelectAll = () => {
+    if (selectedLogs.length === paginatedLogs.length) {
+      setSelectedLogs([]);
+    } else {
+      setSelectedLogs(paginatedLogs.map(log => log.id));
+    }
+  };
+
+  const toggleSelectLog = (logId: string) => {
+    setSelectedLogs(prev => 
+      prev.includes(logId) 
+        ? prev.filter(id => id !== logId)
+        : [...prev, logId]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLogs.length > 0) {
+      bulkDeleteMutation.mutate(selectedLogs);
+    }
+  };
 
   const renderRecordingButton = (log: any) => {
     // Check multiple possible locations for recording URL
@@ -500,7 +604,46 @@ export function CallLogsTable() {
       </Dialog>
     );
   };
-
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {selectedLogs.length > 0 && (
+                  <>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedLogs.length} selected
+                    </span>
+                    <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Selected ({selectedLogs.length})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete {selectedLogs.length} Call Log(s)?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {selectedLogs.length} call log(s)? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleBulkDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
+              </div>
+            </div>
 
   if (error) {
     return (
@@ -543,6 +686,47 @@ export function CallLogsTable() {
           </div>
         ) : filteredLogs.length > 0 ? (
           <>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {selectedLogs.length > 0 && (
+                  <>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedLogs.length} selected
+                    </span>
+                    <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Selected ({selectedLogs.length})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete {selectedLogs.length} Call Log(s)?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {selectedLogs.length} call log(s)? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleBulkDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
+              </div>
+            </div>
+            
             {/* Desktop Table */}
             <div className="hidden lg:block">
               <Table>
@@ -616,6 +800,13 @@ export function CallLogsTable() {
                 <TableBody>
                   {paginatedLogs.map((log, index) => (
                   <TableRow key={log.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedLogs.includes(log.id)}
+                        onCheckedChange={() => toggleSelectLog(log.id)}
+                        aria-label={`Select ${log.caller_number}`}
+                      />
+                    </TableCell>
                     <TableCell className="text-center font-medium">
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </TableCell>
