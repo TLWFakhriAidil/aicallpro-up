@@ -104,6 +104,7 @@ export type Database = {
           parent_call_id: string | null
           phone_number: string | null
           retry_count: number | null
+          retry_enabled: boolean | null
           retry_interval_minutes: number | null
           stage_reached: string | null
           start_time: string
@@ -132,6 +133,7 @@ export type Database = {
           parent_call_id?: string | null
           phone_number?: string | null
           retry_count?: number | null
+          retry_enabled?: boolean | null
           retry_interval_minutes?: number | null
           stage_reached?: string | null
           start_time: string
@@ -160,6 +162,7 @@ export type Database = {
           parent_call_id?: string | null
           phone_number?: string | null
           retry_count?: number | null
+          retry_enabled?: boolean | null
           retry_interval_minutes?: number | null
           stage_reached?: string | null
           start_time?: string

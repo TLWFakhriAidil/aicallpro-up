@@ -653,6 +653,9 @@ Only respond with the JSON.`
             is_retry: isRetry,
             retry_count: currentRetryCount,
             parent_call_id: parentCallId,
+            retry_enabled: retryEnabled || false,
+            retry_interval_minutes: retryIntervalMinutes || 360,
+            max_retry_attempts: maxRetryAttempts || 3,
             metadata: {
               vapi_response: responseData,
               batch_call: true,
@@ -687,6 +690,9 @@ Only respond with the JSON.`
             start_time: new Date().toISOString(),
             idsale: idsale || null,
             customer_name: customerNameFromRequest || contactData?.name || customerName || null,
+            retry_enabled: retryEnabled || false,
+            retry_interval_minutes: retryIntervalMinutes || 360,
+            max_retry_attempts: maxRetryAttempts || 3,
             metadata: {
               error: errorMessage,
               error_details: errorMessage,
