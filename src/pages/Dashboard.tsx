@@ -34,8 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FailedCallsTable } from '@/components/call-logs/FailedCallsTable';
 
 export default function Dashboard() {
   const { user } = useCustomAuth();
@@ -43,7 +41,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
   
   // Initialize filters with today as default
   const today = new Date().toISOString().split('T')[0];
@@ -229,56 +226,44 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Tabs Navigation */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="failed">Failed Calls</TabsTrigger>
-            </TabsList>
+          {/* Dashboard Filters */}
+          <div className="space-y-6 mb-6">
+            <DashboardFilters 
+              filters={filters}
+              onFiltersChange={setFilters}
+              totalCampaigns={stats.totalCampaigns}
+              totalCalls={stats.totalCalls}
+              totalContacts={stats.totalContacts}
+            />
 
-            <TabsContent value="overview" className="space-y-6 mt-6">
-              {/* Dashboard Filters */}
-              <DashboardFilters 
-                filters={filters}
-                onFiltersChange={setFilters}
-                totalCampaigns={stats.totalCampaigns}
-                totalCalls={stats.totalCalls}
-                totalContacts={stats.totalContacts}
-              />
+            {/* Error Alert */}
+            {hasErrors && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Unable to load dashboard data. Please refresh the page or try again later.
+                </AlertDescription>
+              </Alert>
+            )}
 
-              {/* Error Alert */}
-              {hasErrors && (
-                <Alert variant="destructive" className="mb-6">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Unable to load dashboard data. Please refresh the page or try again later.
-                  </AlertDescription>
-                </Alert>
-              )}
+            {/* Stats Cards */}
+            <StatsCards 
+              stats={stats} 
+              isLoading={campaignsLoading || callLogsLoading || contactsLoading} 
+            />
 
-              {/* Stats Cards */}
-              <StatsCards 
-                stats={stats} 
-                isLoading={campaignsLoading || callLogsLoading || contactsLoading} 
-              />
+            {/* End Call Reason Stats */}
+            <EndCallReasonStats 
+              callLogs={filteredCallLogs} 
+              isLoading={callLogsLoading} 
+            />
 
-              {/* End Call Reason Stats */}
-              <EndCallReasonStats 
-                callLogs={filteredCallLogs} 
-                isLoading={callLogsLoading} 
-              />
-
-              {/* Stage Analytics */}
-              <StageAnalytics 
-                callLogs={filteredCallLogs} 
-                isLoading={callLogsLoading} 
-              />
-            </TabsContent>
-
-            <TabsContent value="failed" className="mt-6">
-              <FailedCallsTable />
-            </TabsContent>
-          </Tabs>
+            {/* Stage Analytics */}
+            <StageAnalytics 
+              callLogs={filteredCallLogs} 
+              isLoading={callLogsLoading} 
+            />
+          </div>
 
           {/* Getting Started (show only if no campaigns) */}
           {(!filteredCampaigns || filteredCampaigns.length === 0) && !campaignsLoading && (
