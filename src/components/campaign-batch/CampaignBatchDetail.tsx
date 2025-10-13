@@ -847,6 +847,16 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                       render: (_, log) => getStatusBadge(log.status)
                     },
                     {
+                      key: 'stage_reached',
+                      label: 'Stage',
+                      className: 'w-[120px]',
+                      render: (_, log) => (
+                        <span className="text-xs font-medium text-primary">
+                          {log.stage_reached || log.metadata?.stage_reached || '-'}
+                        </span>
+                      )
+                    },
+                    {
                       key: 'start_time',
                       label: 'Masa Mula',
                       className: 'w-[140px]',
