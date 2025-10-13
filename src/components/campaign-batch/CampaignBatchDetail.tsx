@@ -959,29 +959,125 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-2">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredLogs.length)} of {filteredLogs.length} call logs
+                  </div>
                   <Pagination>
-                    <PaginationContent>
+                    <PaginationContent className="flex-wrap">
                       <PaginationItem>
                         <PaginationPrevious
-                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage((p) => Math.max(1, p - 1));
+                          }}
                           className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                         />
                       </PaginationItem>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(page)}
-                            isActive={currentPage === page}
-                            className="cursor-pointer"
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
+                      
+                      {(() => {
+                        const pages = [];
+                        
+                        if (totalPages <= 7) {
+                          for (let i = 1; i <= totalPages; i++) {
+                            pages.push(
+                              <PaginationItem key={i}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCurrentPage(i);
+                                  }}
+                                  isActive={currentPage === i}
+                                  className="cursor-pointer"
+                                >
+                                  {i}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                        } else {
+                          pages.push(
+                            <PaginationItem key={1}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(1);
+                                }}
+                                isActive={currentPage === 1}
+                                className="cursor-pointer"
+                              >
+                                1
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                          
+                          if (currentPage > 3) {
+                            pages.push(
+                              <PaginationItem key="ellipsis-1">
+                                <span className="flex h-9 w-9 items-center justify-center text-sm">...</span>
+                              </PaginationItem>
+                            );
+                          }
+                          
+                          const startPage = Math.max(2, currentPage - 1);
+                          const endPage = Math.min(totalPages - 1, currentPage + 1);
+                          
+                          for (let i = startPage; i <= endPage; i++) {
+                            pages.push(
+                              <PaginationItem key={i}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCurrentPage(i);
+                                  }}
+                                  isActive={currentPage === i}
+                                  className="cursor-pointer"
+                                >
+                                  {i}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          
+                          if (currentPage < totalPages - 2) {
+                            pages.push(
+                              <PaginationItem key="ellipsis-2">
+                                <span className="flex h-9 w-9 items-center justify-center text-sm">...</span>
+                              </PaginationItem>
+                            );
+                          }
+                          
+                          pages.push(
+                            <PaginationItem key={totalPages}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(totalPages);
+                                }}
+                                isActive={currentPage === totalPages}
+                                className="cursor-pointer"
+                              >
+                                {totalPages}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        
+                        return pages;
+                      })()}
+                      
                       <PaginationItem>
                         <PaginationNext
-                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage((p) => Math.min(totalPages, p + 1));
+                          }}
                           className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                         />
                       </PaginationItem>
@@ -989,11 +1085,6 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                   </Pagination>
                 </div>
               )}
-
-              {/* Summary Info */}
-              <div className="mt-4 text-sm text-muted-foreground">
-                Menunjukkan {paginatedLogs.length} daripada {filteredLogs.length} call logs
-              </div>
             </>
           )}
         </CardContent>
