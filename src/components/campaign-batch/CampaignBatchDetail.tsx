@@ -76,6 +76,7 @@ interface CallLog {
   updated_at: string;
   end_of_call_report?: any;
   captured_data?: Record<string, any>;
+  retry_count?: number;
   metadata?: {
     recording_url?: string;
     transcript?: string;
@@ -832,6 +833,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                       <TableHead className="w-[100px]">Transcript</TableHead>
                       <TableHead className="w-[100px]">Captured Data</TableHead>
                       <TableHead className="w-[80px]">Info</TableHead>
+                      <TableHead className="w-[80px]">Retry Count</TableHead>
                       <TableHead className="w-[80px]">Tindakan</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -864,6 +866,11 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                         <TableCell>{renderTranscriptDialog(log.metadata?.transcript)}</TableCell>
                         <TableCell>{renderCapturedDataDialog(log.captured_data)}</TableCell>
                         <TableCell>{renderErrorInfoDialog(log.metadata)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={log.retry_count > 0 ? "secondary" : "outline"}>
+                            {log.retry_count || 0}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>

@@ -35,6 +35,7 @@ interface CallLog {
   end_of_call_report?: any;
   captured_data?: Record<string, any>;
   customer_name?: string;
+  retry_count?: number;
   metadata?: {
     recording_url?: string;
     transcript?: string;
@@ -793,6 +794,7 @@ export function CallLogsTable() {
                     <TableHead>AI Summary</TableHead>
                     <TableHead>Captured Data</TableHead>
                     <TableHead>Info</TableHead>
+                    <TableHead>Retry Count</TableHead>
                     <TableHead>Cost</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -852,6 +854,11 @@ export function CallLogsTable() {
                     </TableCell>
                     <TableCell>
                       {renderErrorInfoDialog(log.metadata)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={log.retry_count > 0 ? "secondary" : "outline"}>
+                        {log.retry_count || 0}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -915,13 +922,19 @@ export function CallLogsTable() {
                         {getStatusBadge(log.status)}
                       </div>
                       <h3 className="font-semibold text-sm">{log.customer_name || (log as any).contacts?.name || 'Unknown'}</h3>
-                      <p className="text-xs text-muted-foreground">Phone: {log.caller_number}</p>
+                     <p className="text-xs text-muted-foreground">Phone: {log.caller_number}</p>
                       <p className="text-xs text-muted-foreground">{getPromptName(log)}</p>
                       <p className="text-xs text-primary font-medium">Stage: {log.stage_reached || log.metadata?.stage_reached || '-'}</p>
                     </div>
                   </div>
                   
                   <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Retry Count:</span>
+                      <Badge variant={log.retry_count > 0 ? "secondary" : "outline"}>
+                        {log.retry_count || 0}
+                      </Badge>
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Duration:</span>
                       <span className="font-medium">{formatDuration(log.duration)}</span>
