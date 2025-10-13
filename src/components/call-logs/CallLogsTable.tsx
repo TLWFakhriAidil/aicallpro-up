@@ -365,7 +365,7 @@ export function CallLogsTable() {
 
     // Apply stage filter
     const logStage = log.stage_reached || log.metadata?.stage_reached || '';
-    const matchesStage = !filters.stage || logStage === filters.stage;
+    const matchesStage = filters.stage === 'all' || logStage === filters.stage;
 
     return matchesSearch && matchesStatus && matchesStage;
   }) || [];

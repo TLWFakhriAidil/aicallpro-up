@@ -50,7 +50,7 @@ export function CallLogsFilters({
       sortBy: 'created_at',
       sortOrder: 'desc',
       callStatus: 'all',
-      stage: ''
+      stage: 'all'
     });
   };
 
@@ -58,13 +58,13 @@ export function CallLogsFilters({
     filters.dateFrom || 
     filters.dateTo ||
     filters.callStatus !== 'all' ||
-    filters.stage;
+    filters.stage !== 'all';
 
   const activeFiltersCount = [
     filters.search,
     filters.dateFrom || filters.dateTo,
     filters.callStatus !== 'all',
-    filters.stage
+    filters.stage !== 'all'
   ].filter(Boolean).length;
 
   return (
@@ -164,7 +164,7 @@ export function CallLogsFilters({
                   <SelectValue placeholder="Semua Stage" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Stage</SelectItem>
+                  <SelectItem value="all">Semua Stage</SelectItem>
                   {uniqueStages.map((stage) => (
                     <SelectItem key={stage} value={stage}>
                       {stage}
