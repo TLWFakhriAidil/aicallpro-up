@@ -8,7 +8,7 @@ export interface SortableColumn {
   key: string
   label: string
   sortable?: boolean
-  render?: (value: any, row: any) => React.ReactNode
+  render?: (value: any, row: any, index?: number) => React.ReactNode
   className?: string
 }
 
@@ -116,7 +116,7 @@ export function SortableTable({
             {columns.map((column) => (
               <TableCell key={column.key} className={column.className}>
                 {column.render 
-                  ? column.render(row[column.key], row)
+                  ? column.render(row[column.key], row, index)
                   : row[column.key]
                 }
               </TableCell>

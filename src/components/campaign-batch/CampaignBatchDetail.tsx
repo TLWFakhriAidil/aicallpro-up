@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SortableTable, SortableColumn } from "@/components/ui/sortable-table";
 import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle } from "lucide-react";
 import { isCallSuccessful, isCallFailed } from "@/lib/statusUtils";
 import { useMemo, useState } from "react";
@@ -819,88 +820,141 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
           ) : (
             <>
               <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px]">Batch</TableHead>
-                      <TableHead className="w-[140px]">Nombor</TableHead>
-                      <TableHead className="w-[120px]">Nama</TableHead>
-                      <TableHead className="w-[100px]">Status</TableHead>
-                      <TableHead className="w-[140px]">Masa Mula</TableHead>
-                      <TableHead className="w-[80px]">Durasi</TableHead>
-                      <TableHead className="w-[120px]">Prompt</TableHead>
-                      <TableHead className="w-[100px]">Recording</TableHead>
-                      <TableHead className="w-[100px]">Transcript</TableHead>
-                      <TableHead className="w-[100px]">Captured Data</TableHead>
-                      <TableHead className="w-[80px]">Info</TableHead>
-                      <TableHead className="w-[80px]">Retry Count</TableHead>
-                      <TableHead className="w-[80px]">Tindakan</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-semibold text-xs">{getBatchNumber(log.campaign_id)}</TableCell>
-                        <TableCell className="font-mono text-xs">{log.caller_number}</TableCell>
-                        <TableCell className="text-xs">{log.contacts?.name || "-"}</TableCell>
-                        <TableCell>{getStatusBadge(log.status)}</TableCell>
-                        <TableCell className="text-xs">
+                <SortableTable
+                  columns={[
+                    {
+                      key: 'batch',
+                      label: 'Batch',
+                      className: 'w-[80px]',
+                      render: (_, log) => <span className="font-semibold text-xs">{getBatchNumber(log.campaign_id)}</span>
+                    },
+                    {
+                      key: 'caller_number',
+                      label: 'Nombor',
+                      className: 'w-[140px]',
+                      render: (value) => <span className="font-mono text-xs">{value}</span>
+                    },
+                    {
+                      key: 'name',
+                      label: 'Nama',
+                      className: 'w-[120px]',
+                      render: (_, log) => <span className="text-xs">{log.contacts?.name || "-"}</span>
+                    },
+                    {
+                      key: 'status',
+                      label: 'Status',
+                      className: 'w-[100px]',
+                      render: (_, log) => getStatusBadge(log.status)
+                    },
+                    {
+                      key: 'start_time',
+                      label: 'Masa Mula',
+                      className: 'w-[140px]',
+                      render: (value) => (
+                        <div className="text-xs">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {new Date(log.start_time).toLocaleDateString("ms-MY", {
+                            {new Date(value).toLocaleDateString("ms-MY", {
                               day: "2-digit",
                               month: "short",
                             })}
                           </div>
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {new Date(log.start_time).toLocaleTimeString("ms-MY", {
+                            {new Date(value).toLocaleTimeString("ms-MY", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-xs">{formatDuration(log.duration)}</TableCell>
-                        <TableCell className="text-xs">{getPromptName(log.campaign_id)}</TableCell>
-                        <TableCell>{renderRecordingButton(log)}</TableCell>
-                        <TableCell>{renderTranscriptDialog(log.metadata?.transcript)}</TableCell>
-                        <TableCell>{renderCapturedDataDialog(log.captured_data)}</TableCell>
-                        <TableCell>{renderErrorInfoDialog(log.metadata)}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={log.retry_count > 0 ? "secondary" : "outline"}>
-                            {log.retry_count || 0}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Padam Call Log?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tindakan ini tidak boleh dibatalkan. Call log akan dipadam secara kekal.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteMutation.mutate(log.id)}
-                                  className="bg-destructive hover:bg-destructive/90"
-                                >
-                                  Padam
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      )
+                    },
+                    {
+                      key: 'duration',
+                      label: 'Durasi',
+                      className: 'w-[80px]',
+                      render: (value) => <span className="text-xs">{formatDuration(value)}</span>
+                    },
+                    {
+                      key: 'prompt',
+                      label: 'Prompt',
+                      className: 'w-[120px]',
+                      sortable: false,
+                      render: (_, log) => <span className="text-xs">{getPromptName(log.campaign_id)}</span>
+                    },
+                    {
+                      key: 'recording',
+                      label: 'Recording',
+                      className: 'w-[100px]',
+                      sortable: false,
+                      render: (_, log) => renderRecordingButton(log)
+                    },
+                    {
+                      key: 'transcript',
+                      label: 'Transcript',
+                      className: 'w-[100px]',
+                      sortable: false,
+                      render: (_, log) => renderTranscriptDialog(log.metadata?.transcript)
+                    },
+                    {
+                      key: 'captured_data',
+                      label: 'Captured Data',
+                      className: 'w-[100px]',
+                      sortable: false,
+                      render: (_, log) => renderCapturedDataDialog(log.captured_data)
+                    },
+                    {
+                      key: 'info',
+                      label: 'Info',
+                      className: 'w-[80px]',
+                      sortable: false,
+                      render: (_, log) => renderErrorInfoDialog(log.metadata)
+                    },
+                    {
+                      key: 'retry_count',
+                      label: 'Retry Count',
+                      className: 'w-[80px] text-center',
+                      render: (value) => (
+                        <Badge variant={(value || 0) > 0 ? "secondary" : "outline"}>
+                          {value || 0}
+                        </Badge>
+                      )
+                    },
+                    {
+                      key: 'actions',
+                      label: 'Tindakan',
+                      className: 'w-[80px]',
+                      sortable: false,
+                      render: (_, log) => (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Padam Call Log?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tindakan ini tidak boleh dibatalkan. Call log akan dipadam secara kekal.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteMutation.mutate(log.id)}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                Padam
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )
+                    }
+                  ]}
+                  data={paginatedLogs}
+                />
               </div>
 
               {/* Pagination */}

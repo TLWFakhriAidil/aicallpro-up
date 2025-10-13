@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SortableTable, SortableColumn } from '@/components/ui/sortable-table';
 import { Badge } from '@/components/ui/badge';
 import { Phone, Calendar, Clock, Play, FileText, DollarSign, ChevronUp, ChevronDown, Trash2, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -729,138 +730,132 @@ export function CallLogsTable() {
             </div>
             
             {/* Desktop Table */}
-            <div className="hidden lg:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-16">No</TableHead>
-                    <TableHead>Nama Customer</TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold hover:bg-transparent"
-                        onClick={() => setFilters({...filters, sortBy: 'caller_number', sortOrder: filters.sortBy === 'caller_number' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
-                      >
-                        Prospect
-                        {filters.sortBy === 'caller_number' && (
-                          filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableHead>
-                    <TableHead>Prompt</TableHead>
-                    <TableHead>Stage</TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold hover:bg-transparent"
-                        onClick={() => setFilters({...filters, sortBy: 'status', sortOrder: filters.sortBy === 'status' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
-                      >
-                        Status
-                        {filters.sortBy === 'status' && (
-                          filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold hover:bg-transparent"
-                        onClick={() => setFilters({...filters, sortBy: 'start_time', sortOrder: filters.sortBy === 'start_time' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
-                      >
-                        Started At
-                        {filters.sortBy === 'start_time' && (
-                          filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold hover:bg-transparent"
-                        onClick={() => setFilters({...filters, sortBy: 'duration', sortOrder: filters.sortBy === 'duration' && filters.sortOrder === 'asc' ? 'desc' : 'asc'})}
-                      >
-                        Duration
-                        {filters.sortBy === 'duration' && (
-                          filters.sortOrder === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableHead>
-                    <TableHead>Recording</TableHead>
-                    <TableHead>Transcript</TableHead>
-                    <TableHead>AI Summary</TableHead>
-                    <TableHead>Captured Data</TableHead>
-                    <TableHead>Info</TableHead>
-                    <TableHead>Retry Count</TableHead>
-                    <TableHead>Cost</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedLogs.map((log, index) => (
-                  <TableRow key={log.id}>
-                    <TableCell>
+            <div className="hidden lg:block rounded-md border overflow-x-auto relative">
+              <div className="absolute top-3 left-3 z-10">
+                <Checkbox
+                  checked={selectedLogs.length === paginatedLogs.length && paginatedLogs.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all"
+                />
+              </div>
+              <SortableTable
+                columns={[
+                  {
+                    key: 'select',
+                    label: '',
+                    sortable: false,
+                    className: 'w-16',
+                    render: (_, log) => (
                       <Checkbox
                         checked={selectedLogs.includes(log.id)}
                         onCheckedChange={() => toggleSelectLog(log.id)}
                         aria-label={`Select ${log.caller_number}`}
                       />
-                    </TableCell>
-                    <TableCell className="text-center font-medium">
-                      {(currentPage - 1) * itemsPerPage + index + 1}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {log.customer_name || (log as any).contacts?.name || '-'}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {log.caller_number || 'Unknown'}
-                    </TableCell>
-                    <TableCell>
-                      {getPromptName(log)}
-                    </TableCell>
-                    <TableCell>
+                    )
+                  },
+                  {
+                    key: 'index',
+                    label: 'No',
+                    sortable: false,
+                    className: 'w-16',
+                    render: (_, __, index) => (
+                      <span className="text-center font-medium">{(currentPage - 1) * itemsPerPage + index + 1}</span>
+                    )
+                  },
+                  {
+                    key: 'customer_name',
+                    label: 'Nama Customer',
+                    render: (_, log) => (
+                      <span className="font-medium">{log.customer_name || (log as any).contacts?.name || '-'}</span>
+                    )
+                  },
+                  {
+                    key: 'caller_number',
+                    label: 'Prospect',
+                    render: (value) => <span className="font-medium">{value || 'Unknown'}</span>
+                  },
+                  {
+                    key: 'prompt',
+                    label: 'Prompt',
+                    sortable: false,
+                    render: (_, log) => getPromptName(log)
+                  },
+                  {
+                    key: 'stage_reached',
+                    label: 'Stage',
+                    render: (_, log) => (
                       <span className="text-sm font-medium text-primary">
                         {log.stage_reached || log.metadata?.stage_reached || '-'}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(log.status)}
-                    </TableCell>
-                    <TableCell>
+                    )
+                  },
+                  {
+                    key: 'status',
+                    label: 'Status',
+                    render: (_, log) => getStatusBadge(log.status)
+                  },
+                  {
+                    key: 'start_time',
+                    label: 'Started At',
+                    render: (value) => (
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4 mr-1" />
-                        {new Date(log.start_time).toLocaleDateString()}
+                        {new Date(value).toLocaleDateString()}
                         <Clock className="h-4 w-4 ml-2 mr-1" />
-                        {new Date(log.start_time).toLocaleTimeString()}
+                        {new Date(value).toLocaleTimeString()}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {formatDuration(log.duration)}
-                    </TableCell>
-                    <TableCell>
-                      {renderRecordingButton(log)}
-                    </TableCell>
-                    <TableCell>
-                      {renderTranscriptDialog(log.metadata?.transcript)}
-                    </TableCell>
-                    <TableCell>
-                      {renderSummaryDialog(log.metadata?.summary)}
-                    </TableCell>
-                    <TableCell>
-                      {renderCapturedDataDialog(log.captured_data)}
-                    </TableCell>
-                    <TableCell>
-                      {renderErrorInfoDialog(log.metadata)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={log.retry_count > 0 ? "secondary" : "outline"}>
-                        {log.retry_count || 0}
+                    )
+                  },
+                  {
+                    key: 'duration',
+                    label: 'Duration',
+                    render: (value) => formatDuration(value)
+                  },
+                  {
+                    key: 'recording',
+                    label: 'Recording',
+                    sortable: false,
+                    render: (_, log) => renderRecordingButton(log)
+                  },
+                  {
+                    key: 'transcript',
+                    label: 'Transcript',
+                    sortable: false,
+                    render: (_, log) => renderTranscriptDialog(log.metadata?.transcript)
+                  },
+                  {
+                    key: 'summary',
+                    label: 'AI Summary',
+                    sortable: false,
+                    render: (_, log) => renderSummaryDialog(log.metadata?.summary)
+                  },
+                  {
+                    key: 'captured_data',
+                    label: 'Captured Data',
+                    sortable: false,
+                    render: (_, log) => renderCapturedDataDialog(log.captured_data)
+                  },
+                  {
+                    key: 'info',
+                    label: 'Info',
+                    sortable: false,
+                    render: (_, log) => renderErrorInfoDialog(log.metadata)
+                  },
+                  {
+                    key: 'retry_count',
+                    label: 'Retry Count',
+                    className: 'text-center',
+                    render: (value) => (
+                      <Badge variant={(value || 0) > 0 ? "secondary" : "outline"}>
+                        {value || 0}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
+                    )
+                  },
+                  {
+                    key: 'cost',
+                    label: 'Cost',
+                    sortable: false,
+                    render: (_, log) => (
                       <div className="space-y-1">
                         <div className="text-xs font-medium">
                           VAPI: ${(log.metadata?.vapi_cost || 0).toFixed(4)}
@@ -872,8 +867,14 @@ export function CallLogsTable() {
                           Total: ${(log.metadata?.total_cost || log.metadata?.call_cost || 0).toFixed(4)}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right">
+                    )
+                  },
+                  {
+                    key: 'actions',
+                    label: 'Actions',
+                    sortable: false,
+                    className: 'text-right',
+                    render: (_, log) => (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -902,11 +903,14 @@ export function CallLogsTable() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    )
+                  }
+                ]}
+                data={paginatedLogs}
+                sortKey={filters.sortBy}
+                sortOrder={filters.sortOrder}
+                onSort={(key, order) => setFilters({ ...filters, sortBy: key, sortOrder: order })}
+              />
             </div>
 
             {/* Mobile Cards */}
