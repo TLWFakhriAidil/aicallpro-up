@@ -105,7 +105,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     dateFrom: '',
     dateTo: '',
     callStatus: 'all',
-    stage: ''
+    stage: 'all'
   });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -552,7 +552,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
       
       // Stage filter
       const logStage = log.metadata?.stage_reached ? String(log.metadata.stage_reached) : null;
-      const matchesStage = !filters.stage || logStage === filters.stage;
+      const matchesStage = filters.stage === 'all' || logStage === filters.stage;
       
       // Date filter
       const logDate = new Date(log.start_time);
