@@ -339,6 +339,15 @@ export function CallLogsTable() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Extract unique stages from call logs
+  const uniqueStages = Array.from(
+    new Set(
+      callLogs
+        ?.map(log => log.stage_reached || log.metadata?.stage_reached)
+        .filter(Boolean) || []
+    )
+  ).sort();
+
   const filteredLogs = callLogs?.filter(log => {
     const searchLower = filters.search.toLowerCase();
     const customerName = (log.customer_name || (log as any).contacts?.name || '').toLowerCase();
@@ -355,8 +364,8 @@ export function CallLogsTable() {
       log.status !== 'answered';
 
     // Apply stage filter
-    const matchesStage = !filters.stage || 
-      (log.stage_reached && log.stage_reached.toLowerCase().includes(filters.stage.toLowerCase()));
+    const logStage = log.stage_reached || log.metadata?.stage_reached || '';
+    const matchesStage = !filters.stage || logStage === filters.stage;
 
     return matchesSearch && matchesStatus && matchesStage;
   }) || [];
@@ -662,12 +671,13 @@ export function CallLogsTable() {
 
   return (
     <div className="space-y-6">
-      <CallLogsFilters 
+      <CallLogsFilters
         filters={filters}
         onFiltersChange={setFilters}
         totalCount={callLogs?.length || 0}
         filteredCount={filteredLogs.length}
         totalCost={totalCost}
+        uniqueStages={uniqueStages}
       />
       
       <Card>

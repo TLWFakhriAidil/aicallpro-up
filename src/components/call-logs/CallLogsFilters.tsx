@@ -22,6 +22,7 @@ interface CallLogsFiltersProps {
   totalCount?: number;
   filteredCount?: number;
   totalCost?: number;
+  uniqueStages?: string[];
 }
 
 export function CallLogsFilters({ 
@@ -29,7 +30,8 @@ export function CallLogsFilters({
   onFiltersChange, 
   totalCount = 0, 
   filteredCount = 0,
-  totalCost = 0
+  totalCost = 0,
+  uniqueStages = []
 }: CallLogsFiltersProps) {
   const [showFilters, setShowFilters] = useState(false);
 
@@ -157,12 +159,19 @@ export function CallLogsFilters({
                 <Search className="h-4 w-4" />
                 Stage
               </label>
-              <Input
-                placeholder="e.g. confirmation"
-                value={filters.stage}
-                onChange={(e) => updateFilter('stage', e.target.value)}
-                className="w-full"
-              />
+              <Select value={filters.stage} onValueChange={(value) => updateFilter('stage', value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua Stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Semua Stage</SelectItem>
+                  {uniqueStages.map((stage) => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
           </div>
