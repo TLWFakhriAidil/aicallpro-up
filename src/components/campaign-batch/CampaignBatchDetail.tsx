@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle, Filter } from "lucide-react";
+import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle, Filter, CalendarIcon } from "lucide-react";
 import { isCallSuccessful, isCallFailed } from "@/lib/statusUtils";
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +107,8 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stageFilter, setStageFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -549,7 +555,24 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
       const logStage = log.metadata?.stage_reached ? String(log.metadata.stage_reached) : null;
       const matchesStage = stageFilter === "all" || logStage === stageFilter;
       
-      return matchesSearch && matchesStatus && matchesStage;
+      // Date filter
+      const logDate = new Date(log.start_time);
+      let matchesDateFrom = true;
+      let matchesDateTo = true;
+      
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        matchesDateFrom = logDate >= fromDate;
+      }
+      
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        matchesDateTo = logDate <= toDate;
+      }
+      
+      return matchesSearch && matchesStatus && matchesStage && matchesDateFrom && matchesDateTo;
     }) || [];
 
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -706,11 +729,11 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
           <CardDescription>Semua panggilan untuk kempen "{campaignName}"</CardDescription>
           
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Cari</label>
               <Input
-                placeholder="Cari nombor, nama, atau prompt..."
+                placeholder="Cari nombor, nama..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -718,6 +741,66 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                 }}
                 className="w-full"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Dari Tarikh</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateFrom && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Pilih tarikh"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={(date) => {
+                      setDateFrom(date);
+                      setCurrentPage(1);
+                    }}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Hingga Tarikh</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateTo && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, "dd/MM/yyyy") : "Pilih tarikh"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={(date) => {
+                      setDateTo(date);
+                      setCurrentPage(1);
+                    }}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
             <div className="space-y-2">
@@ -766,6 +849,26 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               </Select>
             </div>
           </div>
+
+          {/* Clear Filters Button */}
+          {(searchQuery || statusFilter !== "all" || stageFilter !== "all" || dateFrom || dateTo) && (
+            <div className="pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                  setStageFilter("all");
+                  setDateFrom(undefined);
+                  setDateTo(undefined);
+                  setCurrentPage(1);
+                }}
+              >
+                Clear All Filters
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {callLogsLoading ? (
