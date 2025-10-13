@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle, Filter } from "lucide-react";
 import { isCallSuccessful, isCallFailed } from "@/lib/statusUtils";
 import { useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -100,6 +101,8 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [stageFilter, setStageFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -508,16 +511,45 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     );
   };
 
+  // Get unique statuses and stages for filters
+  const uniqueStatuses = useMemo(() => {
+    if (!callLogs) return [];
+    const statuses = new Set(callLogs.map(log => log.status));
+    return Array.from(statuses);
+  }, [callLogs]);
+
+  const uniqueStages = useMemo(() => {
+    if (!callLogs) return [];
+    const stages = new Set<string>();
+    callLogs.forEach(log => {
+      const stage = log.metadata?.stage_reached;
+      if (stage) stages.add(String(stage));
+    });
+    return Array.from(stages);
+  }, [callLogs]);
+
   // Filter and paginate call logs
   const filteredLogs =
     callLogs?.filter((log) => {
       const searchLower = searchQuery.toLowerCase();
       const customerName = (log.contacts?.name || "").toLowerCase();
-      return (
-        log.caller_number.toLowerCase().includes(searchLower) ||
+      const phoneNumber = log.caller_number.toLowerCase();
+      const promptName = getPromptName(log.campaign_id).toLowerCase();
+      
+      // Search filter
+      const matchesSearch = 
+        phoneNumber.includes(searchLower) ||
         customerName.includes(searchLower) ||
-        getPromptName(log.campaign_id).toLowerCase().includes(searchLower)
-      );
+        promptName.includes(searchLower);
+      
+      // Status filter
+      const matchesStatus = statusFilter === "all" || log.status === statusFilter;
+      
+      // Stage filter
+      const logStage = log.metadata?.stage_reached ? String(log.metadata.stage_reached) : null;
+      const matchesStage = stageFilter === "all" || logStage === stageFilter;
+      
+      return matchesSearch && matchesStatus && matchesStage;
     }) || [];
 
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -670,16 +702,70 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
       {/* Call Logs List */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle>Senarai Call Logs</CardTitle>
-            <Input
-              placeholder="Cari nombor, nama, atau prompt..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64"
-            />
-          </div>
+          <CardTitle>Senarai Call Logs</CardTitle>
           <CardDescription>Semua panggilan untuk kempen "{campaignName}"</CardDescription>
+          
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cari</label>
+              <Input
+                placeholder="Cari nombor, nama, atau prompt..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  {uniqueStatuses.map(status => (
+                    <SelectItem key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Stage</label>
+              <Select
+                value={stageFilter}
+                onValueChange={(value) => {
+                  setStageFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Stage</SelectItem>
+                  {uniqueStages.map(stage => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {callLogsLoading ? (
