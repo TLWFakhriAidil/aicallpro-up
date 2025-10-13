@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, BarChart3, Calendar, Users, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { CampaignBatchDetail } from './CampaignBatchDetail';
-import { CampaignBatchFilters, CampaignBatchFilters as CampaignBatchFiltersType } from './CampaignBatchFilters';
+import { CampaignBatchListFilters, CampaignBatchListFilters as CampaignBatchListFiltersType } from './CampaignBatchListFilters';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface CampaignGroup {
@@ -25,7 +25,7 @@ export function CampaignBatchList() {
   const queryClient = useQueryClient();
   const [selectedCampaignName, setSelectedCampaignName] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<CampaignBatchFiltersType>({
+  const [filters, setFilters] = useState<CampaignBatchListFiltersType>({
     search: '',
     dateFrom: '',
     dateTo: '',
@@ -191,7 +191,7 @@ export function CampaignBatchList() {
 
   return (
     <div className="space-y-6">
-      <CampaignBatchFilters
+      <CampaignBatchListFilters
         filters={filters}
         onFiltersChange={setFilters}
         totalCount={totalCount}

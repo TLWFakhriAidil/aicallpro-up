@@ -6,14 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle, Filter, CalendarIcon } from "lucide-react";
+import { ArrowLeft, TrendingUp, BarChart3, Phone, Calendar, Clock, Play, FileText, Trash2, Info, Users, CheckCircle, XCircle } from "lucide-react";
 import { isCallSuccessful, isCallFailed } from "@/lib/statusUtils";
 import { useMemo, useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { CampaignBatchFilters, CampaignBatchFilters as CampaignBatchFiltersType } from "./CampaignBatchFilters";
 import {
   Dialog,
   DialogContent,
@@ -104,11 +100,13 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   const { user } = useCustomAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [stageFilter, setStageFilter] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date | undefined>();
-  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [filters, setFilters] = useState<CampaignBatchFiltersType>({
+    search: '',
+    dateFrom: '',
+    dateTo: '',
+    callStatus: 'all',
+    stage: ''
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -216,7 +214,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
   }, [stageStats]);
 
   const getStagePercentage = (count: number) => {
-    return totalStages > 0 ? ((count / totalStages) * 100).toFixed(1) : "0.0";
+    return filteredTotalStages > 0 ? ((count / filteredTotalStages) * 100).toFixed(1) : "0.0";
   };
 
   const getStageColor = (index: number) => {
@@ -517,13 +515,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     );
   };
 
-  // Get unique statuses and stages for filters
-  const uniqueStatuses = useMemo(() => {
-    if (!callLogs) return [];
-    const statuses = new Set(callLogs.map(log => log.status));
-    return Array.from(statuses);
-  }, [callLogs]);
-
+  // Get unique stages for filter dropdown
   const uniqueStages = useMemo(() => {
     if (!callLogs) return [];
     const stages = new Set<string>();
@@ -534,46 +526,118 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
     return Array.from(stages);
   }, [callLogs]);
 
-  // Filter and paginate call logs
-  const filteredLogs =
-    callLogs?.filter((log) => {
-      const searchLower = searchQuery.toLowerCase();
+  // Filter call logs based on all filters
+  const filteredLogs = useMemo(() => {
+    if (!callLogs) return [];
+
+    return callLogs.filter((log) => {
+      const searchLower = filters.search.toLowerCase();
       const customerName = (log.contacts?.name || "").toLowerCase();
       const phoneNumber = log.caller_number.toLowerCase();
       const promptName = getPromptName(log.campaign_id).toLowerCase();
       
       // Search filter
-      const matchesSearch = 
+      const matchesSearch = !filters.search ||
         phoneNumber.includes(searchLower) ||
         customerName.includes(searchLower) ||
         promptName.includes(searchLower);
       
-      // Status filter
-      const matchesStatus = statusFilter === "all" || log.status === statusFilter;
+      // Call status filter
+      let matchesCallStatus = true;
+      if (filters.callStatus === 'answered') {
+        matchesCallStatus = isCallSuccessful(log.status);
+      } else if (filters.callStatus === 'not_answered') {
+        matchesCallStatus = isCallFailed(log.status);
+      }
       
       // Stage filter
       const logStage = log.metadata?.stage_reached ? String(log.metadata.stage_reached) : null;
-      const matchesStage = stageFilter === "all" || logStage === stageFilter;
+      const matchesStage = !filters.stage || logStage === filters.stage;
       
       // Date filter
       const logDate = new Date(log.start_time);
       let matchesDateFrom = true;
       let matchesDateTo = true;
       
-      if (dateFrom) {
-        const fromDate = new Date(dateFrom);
+      if (filters.dateFrom) {
+        const fromDate = new Date(filters.dateFrom);
         fromDate.setHours(0, 0, 0, 0);
         matchesDateFrom = logDate >= fromDate;
       }
       
-      if (dateTo) {
-        const toDate = new Date(dateTo);
+      if (filters.dateTo) {
+        const toDate = new Date(filters.dateTo);
         toDate.setHours(23, 59, 59, 999);
         matchesDateTo = logDate <= toDate;
       }
       
-      return matchesSearch && matchesStatus && matchesStage && matchesDateFrom && matchesDateTo;
-    }) || [];
+      return matchesSearch && matchesCallStatus && matchesStage && matchesDateFrom && matchesDateTo;
+    });
+  }, [callLogs, filters, getPromptName]);
+
+  // Calculate stage statistics from FILTERED call logs
+  const filteredStageStats = useMemo(() => {
+    if (!filteredLogs) return [];
+
+    const answeredCalls = filteredLogs.filter((log) => log.status === "answered");
+    const stageMap = new Map<string, { count: number; first_occurrence: number }>();
+
+    answeredCalls.forEach((log, index) => {
+      const metadata = log.metadata as any;
+      const stageReached = metadata?.stage_reached;
+
+      if (!stageReached) return;
+
+      const stageName = String(stageReached).trim();
+
+      if (stageMap.has(stageName)) {
+        stageMap.get(stageName)!.count++;
+      } else {
+        stageMap.set(stageName, {
+          count: 1,
+          first_occurrence: index,
+        });
+      }
+    });
+
+    const stageArray = Array.from(stageMap.entries()).map(([stage_name, data]) => ({
+      stage_name,
+      count: data.count,
+      first_occurrence: data.first_occurrence,
+    }));
+
+    stageArray.sort((a, b) => a.first_occurrence - b.first_occurrence);
+
+    return stageArray;
+  }, [filteredLogs]);
+
+  const filteredTotalStages = useMemo(() => {
+    return filteredStageStats.reduce((sum, stage) => sum + stage.count, 0);
+  }, [filteredStageStats]);
+
+  // Calculate accurate statistics from FILTERED call logs
+  const filteredStats = useMemo(() => {
+    if (!filteredLogs || filteredLogs.length === 0) {
+      return {
+        totalCalls: 0,
+        successfulCalls: 0,
+        failedCalls: 0,
+        successRate: 0
+      };
+    }
+
+    const successfulCalls = filteredLogs.filter(log => isCallSuccessful(log.status)).length;
+    const failedCalls = filteredLogs.filter(log => isCallFailed(log.status)).length;
+    const totalCalls = filteredLogs.length;
+    const successRate = totalCalls > 0 ? (successfulCalls / totalCalls * 100) : 0;
+
+    return {
+      totalCalls,
+      successfulCalls,
+      failedCalls,
+      successRate: Math.round(successRate * 10) / 10
+    };
+  }, [filteredLogs]);
 
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
@@ -606,6 +670,18 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
         </CardHeader>
       </Card>
 
+      {/* Filters */}
+      <CampaignBatchFilters
+        filters={filters}
+        onFiltersChange={(newFilters) => {
+          setFilters(newFilters);
+          setCurrentPage(1);
+        }}
+        totalCalls={callLogs?.length || 0}
+        filteredCalls={filteredLogs?.length || 0}
+        uniqueStages={uniqueStages}
+      />
+
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -614,7 +690,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               <Users className="h-4 w-4 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Jumlah Nombor</p>
-                <p className="text-2xl font-bold">{stats.totalCalls}</p>
+                <p className="text-2xl font-bold">{filteredStats.totalCalls}</p>
               </div>
             </div>
           </CardContent>
@@ -626,7 +702,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               <CheckCircle className="h-4 w-4 text-success" />
               <div>
                 <p className="text-sm text-muted-foreground">Angkat Call</p>
-                <p className="text-2xl font-bold text-success">{stats.successfulCalls}</p>
+                <p className="text-2xl font-bold text-success">{filteredStats.successfulCalls}</p>
               </div>
             </div>
           </CardContent>
@@ -638,7 +714,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               <XCircle className="h-4 w-4 text-destructive" />
               <div>
                 <p className="text-sm text-muted-foreground">Tak Angkat Call</p>
-                <p className="text-2xl font-bold text-destructive">{stats.failedCalls}</p>
+                <p className="text-2xl font-bold text-destructive">{filteredStats.failedCalls}</p>
               </div>
             </div>
           </CardContent>
@@ -646,7 +722,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
       </div>
 
       {/* Stage Analytics */}
-      {stageStats.length > 0 && (
+      {filteredStageStats.length > 0 && (
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -657,7 +733,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stageStats.map((stage, index) => {
+              {filteredStageStats.map((stage, index) => {
                 const colorScheme = getStageColor(index);
                 return (
                   <div key={index} className={`flex items-center justify-between p-4 rounded-lg ${colorScheme.bg}`}>
@@ -668,7 +744,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                       <div>
                         <span className="text-sm font-medium">{stage.stage_name}</span>
                         <p className="text-xs text-muted-foreground">
-                          Stage {index + 1} of {stageStats.length}
+                          Stage {index + 1} of {filteredStageStats.length}
                         </p>
                       </div>
                     </div>
@@ -681,11 +757,11 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
               })}
             </div>
 
-            {totalStages > 0 && (
+            {filteredTotalStages > 0 && (
               <div className="mt-6 pt-4 border-t">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Answered Calls Analyzed</span>
-                  <span className="font-medium">{totalStages}</span>
+                  <span className="font-medium">{filteredTotalStages}</span>
                 </div>
               </div>
             )}
@@ -727,148 +803,6 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
         <CardHeader>
           <CardTitle>Senarai Call Logs</CardTitle>
           <CardDescription>Semua panggilan untuk kempen "{campaignName}"</CardDescription>
-          
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cari</label>
-              <Input
-                placeholder="Cari nombor, nama..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Dari Tarikh</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dateFrom && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Pilih tarikh"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={(date) => {
-                      setDateFrom(date);
-                      setCurrentPage(1);
-                    }}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Hingga Tarikh</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dateTo && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, "dd/MM/yyyy") : "Pilih tarikh"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={(date) => {
-                      setDateTo(date);
-                      setCurrentPage(1);
-                    }}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  {uniqueStatuses.map(status => (
-                    <SelectItem key={status} value={status}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Stage</label>
-              <Select
-                value={stageFilter}
-                onValueChange={(value) => {
-                  setStageFilter(value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih stage" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Stage</SelectItem>
-                  {uniqueStages.map(stage => (
-                    <SelectItem key={stage} value={stage}>
-                      {stage}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Clear Filters Button */}
-          {(searchQuery || statusFilter !== "all" || stageFilter !== "all" || dateFrom || dateTo) && (
-            <div className="pt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery("");
-                  setStatusFilter("all");
-                  setStageFilter("all");
-                  setDateFrom(undefined);
-                  setDateTo(undefined);
-                  setCurrentPage(1);
-                }}
-              >
-                Clear All Filters
-              </Button>
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           {callLogsLoading ? (
@@ -879,7 +813,7 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchQuery ? "Tiada call logs dijumpai untuk carian ini" : "Tiada call logs dijumpai"}
+              {filters.search ? "Tiada call logs dijumpai untuk carian ini" : "Tiada call logs dijumpai"}
             </div>
           ) : (
             <>

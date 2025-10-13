@@ -1,118 +1,193 @@
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Calendar as CalendarIcon, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Search, Filter, X, Calendar, Phone, TrendingUp } from "lucide-react";
 
 export interface CampaignBatchFilters {
   search: string;
   dateFrom: string;
   dateTo: string;
-  sortBy: 'campaign_name' | 'total_batches' | 'total_calls' | 'latest_created_at';
-  sortOrder: 'asc' | 'desc';
+  callStatus: 'all' | 'answered' | 'not_answered';
   stage: string;
 }
 
 interface CampaignBatchFiltersProps {
   filters: CampaignBatchFilters;
   onFiltersChange: (filters: CampaignBatchFilters) => void;
-  totalCount: number;
-  filteredCount: number;
+  totalCalls?: number;
+  filteredCalls?: number;
+  uniqueStages?: string[];
 }
 
-export function CampaignBatchFilters({
-  filters,
-  onFiltersChange,
-  totalCount,
-  filteredCount,
+export function CampaignBatchFilters({ 
+  filters, 
+  onFiltersChange, 
+  totalCalls = 0, 
+  filteredCalls = 0,
+  uniqueStages = []
 }: CampaignBatchFiltersProps) {
+  const [showFilters, setShowFilters] = useState(false);
+
+  const updateFilter = (key: keyof CampaignBatchFilters, value: any) => {
+    onFiltersChange({
+      ...filters,
+      [key]: value
+    });
+  };
+
+  const clearFilters = () => {
+    onFiltersChange({
+      search: '',
+      dateFrom: '',
+      dateTo: '',
+      callStatus: 'all',
+      stage: ''
+    });
+  };
+
+  const hasActiveFilters = filters.search || 
+    filters.dateFrom || 
+    filters.dateTo ||
+    filters.callStatus !== 'all' ||
+    filters.stage;
+
+  const activeFiltersCount = [
+    filters.search,
+    filters.dateFrom || filters.dateTo,
+    filters.callStatus !== 'all',
+    filters.stage
+  ].filter(Boolean).length;
+
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Search */}
-          <div className="space-y-2">
-            <Label htmlFor="search" className="flex items-center gap-2 text-sm font-medium">
-              <Search className="h-4 w-4" />
-              Cari Nama Kempen
-            </Label>
-            <Input
-              id="search"
-              placeholder="Taipkan untuk cari..."
-              value={filters.search}
-              onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            />
+      <CardContent className="p-4 space-y-4">
+        {/* Search and Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari nama, nombor, atau prompt..."
+                value={filters.search}
+                onChange={(e) => updateFilter('search', e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
-
-          {/* Date From */}
-          <div className="space-y-2">
-            <Label htmlFor="dateFrom" className="flex items-center gap-2 text-sm font-medium">
-              <CalendarIcon className="h-4 w-4" />
-              Dari Tarikh
-            </Label>
-            <Input
-              id="dateFrom"
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => onFiltersChange({ ...filters, dateFrom: e.target.value })}
-            />
-          </div>
-
-          {/* Date To */}
-          <div className="space-y-2">
-            <Label htmlFor="dateTo" className="flex items-center gap-2 text-sm font-medium">
-              <CalendarIcon className="h-4 w-4" />
-              Hingga Tarikh
-            </Label>
-            <Input
-              id="dateTo"
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
-            />
-          </div>
-
-          {/* Stage Filter */}
-          <div className="space-y-2">
-            <Label htmlFor="stage" className="flex items-center gap-2 text-sm font-medium">
-              <Search className="h-4 w-4" />
-              Stage
-            </Label>
-            <Input
-              id="stage"
-              placeholder="e.g. confirmation"
-              value={filters.stage}
-              onChange={(e) => onFiltersChange({ ...filters, stage: e.target.value })}
-            />
-          </div>
-
-          {/* Sort By */}
-          <div className="space-y-2">
-            <Label htmlFor="sortBy" className="flex items-center gap-2 text-sm font-medium">
-              <Filter className="h-4 w-4" />
-              Susun Mengikut
-            </Label>
-            <Select
-              value={filters.sortBy}
-              onValueChange={(value) => onFiltersChange({ ...filters, sortBy: value as CampaignBatchFilters['sortBy'] })}
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showFilters ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
             >
-              <SelectTrigger id="sortBy">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="latest_created_at">Tarikh</SelectItem>
-                <SelectItem value="campaign_name">Nama Kempen</SelectItem>
-                <SelectItem value="total_batches">Jumlah Batch</SelectItem>
-                <SelectItem value="total_calls">Jumlah Panggilan</SelectItem>
-              </SelectContent>
-            </Select>
+              <Filter className="h-4 w-4" />
+              Filters
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-1 text-xs">
+                  {activeFiltersCount}
+                </Badge>
+              )}
+            </Button>
+            
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
 
+        {/* Advanced Filters */}
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Dari Tarikh
+              </label>
+              <Input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => updateFilter('dateFrom', e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Hingga Tarikh
+              </label>
+              <Input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => updateFilter('dateTo', e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                Status Panggilan
+              </label>
+              <Select value={filters.callStatus} onValueChange={(value) => updateFilter('callStatus', value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua panggilan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Panggilan</SelectItem>
+                  <SelectItem value="answered">Customer Angkat</SelectItem>
+                  <SelectItem value="not_answered">Customer Tak Angkat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Stage
+              </label>
+              <Select value={filters.stage} onValueChange={(value) => updateFilter('stage', value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Semua Stage</SelectItem>
+                  {uniqueStages.map(stage => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
         {/* Results Summary */}
-        {filteredCount !== totalCount && (
-          <div className="mt-4 text-sm text-muted-foreground">
-            Menunjukkan {filteredCount} daripada {totalCount} kempen
+        {(hasActiveFilters || totalCalls > 0) && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-muted-foreground pt-2 border-t">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <span>
+                {hasActiveFilters ? (
+                  <>Showing {filteredCalls} of {totalCalls} call logs</>
+                ) : (
+                  <>Total: {totalCalls} call logs</>
+                )}
+              </span>
+            </div>
+            
+            {hasActiveFilters && (
+              <Button variant="link" size="sm" onClick={clearFilters} className="h-auto p-0">
+                Clear all filters
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
