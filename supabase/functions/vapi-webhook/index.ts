@@ -972,6 +972,26 @@ async function processEndOfCallReport(supabase: any, message: any) {
       status: evaluationStatus
     })
 
+    // If this is a successful retry (answered), disable retries on the parent call
+    if (callOutcome === 'answered' && callLog?.parent_call_id) {
+      console.log(`✅ Retry was successful! Disabling retries on parent call: ${callLog.parent_call_id}`);
+      
+      const { error: parentUpdateError } = await supabase
+        .from('call_logs')
+        .update({ 
+          retry_enabled: false,
+          next_retry_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', callLog.parent_call_id);
+
+      if (parentUpdateError) {
+        console.error('⚠️ Failed to disable retries on parent call:', parentUpdateError);
+      } else {
+        console.log(`✅ Parent call retry disabled successfully`);
+      }
+    }
+
     // Send data to ERP system (if configured)
     try {
       await sendToERPSystem({
