@@ -835,10 +835,10 @@ export function CampaignBatchDetail({ campaignName, onBack }: CampaignBatchDetai
                       render: (value) => <span className="font-mono text-xs">{value}</span>
                     },
                     {
-                      key: 'name',
+                      key: 'customer_name',
                       label: 'Nama',
                       className: 'w-[120px]',
-                      render: (_, log) => <span className="text-xs">{log.contacts?.name || "-"}</span>
+                      render: (_, log) => <span className="text-xs">{log.customer_name || "-"}</span>
                     },
                     {
                       key: 'status',
