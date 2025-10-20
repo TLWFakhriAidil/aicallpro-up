@@ -336,7 +336,7 @@ serve(async (req) => {
       modelOutputInMessagesEnabled: true,
       transportConfigurations: [
         {
-          provider: 'sip',
+          provider: 'twilio',
           timeout: 60,
           record: true,
           recordingChannels: 'dual'
@@ -344,14 +344,8 @@ serve(async (req) => {
       ]
     };
 
-    // Use user's AlienVoip SIP configuration
-    const sipConfig = {
-      sipUri: `sip:${phoneConfig.sip_username}@${phoneConfig.sip_proxy}`,
-      user: phoneConfig.sip_username,
-      password: phoneConfig.sip_password,
-      proxy: phoneConfig.sip_proxy,
-      codec: phoneConfig.sip_codec || 'G729',
-    };
+    // AlienVoip SIP is configured in Twilio - use Twilio phone number from apiKeys
+    const twilioPhoneNumber = apiKeys.phone_number_id;
 
     // Create a map of phone numbers to customer names from the request
     const phoneToNameMap = new Map<string, string>();
@@ -601,7 +595,7 @@ Only respond with the JSON.`
 
           const postData = {
             assistant: fullAssistantConfig,
-            phoneNumber: sipConfig,
+            phoneNumber: twilioPhoneNumber,
             customer: { number: phoneNumber },
             metadata: {
               call_type: 'full_backend_cold_call',
@@ -616,8 +610,7 @@ Only respond with the JSON.`
           };
 
           console.log(`📞 Initiating call to ${phoneNumber}`);
-          console.log(`   SIP User: ${sipConfig.user}`);
-          console.log(`   SIP Proxy: ${sipConfig.proxy}`);
+          console.log(`   Using Twilio Number: ${twilioPhoneNumber}`);
           
           // Make call to VAPI API
           const response = await fetch('https://api.vapi.ai/call', {
@@ -678,10 +671,7 @@ Only respond with the JSON.`
               vapi_response: responseData,
               batch_call: true,
               customer_name: contactData?.name || null,
-              sip_config: {
-                user: sipConfig.user,
-                proxy: sipConfig.proxy
-              }
+              twilio_number: twilioPhoneNumber
             }
           });
 
