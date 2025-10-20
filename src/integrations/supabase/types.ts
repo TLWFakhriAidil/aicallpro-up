@@ -410,9 +410,11 @@ export type Database = {
           erp_webhook_url: string | null
           id: string
           provider: string | null
-          twilio_account_sid: string
-          twilio_auth_token: string
-          twilio_phone_number: string
+          sip_codec: string | null
+          sip_password: string | null
+          sip_proxy: string | null
+          sip_proxy_sec: string | null
+          sip_username: string | null
           updated_at: string
           user_id: string
           waha_api_key: string | null
@@ -426,9 +428,11 @@ export type Database = {
           erp_webhook_url?: string | null
           id?: string
           provider?: string | null
-          twilio_account_sid: string
-          twilio_auth_token: string
-          twilio_phone_number: string
+          sip_codec?: string | null
+          sip_password?: string | null
+          sip_proxy?: string | null
+          sip_proxy_sec?: string | null
+          sip_username?: string | null
           updated_at?: string
           user_id: string
           waha_api_key?: string | null
@@ -442,9 +446,11 @@ export type Database = {
           erp_webhook_url?: string | null
           id?: string
           provider?: string | null
-          twilio_account_sid?: string
-          twilio_auth_token?: string
-          twilio_phone_number?: string
+          sip_codec?: string | null
+          sip_password?: string | null
+          sip_proxy?: string | null
+          sip_proxy_sec?: string | null
+          sip_username?: string | null
           updated_at?: string
           user_id?: string
           waha_api_key?: string | null

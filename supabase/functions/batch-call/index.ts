@@ -75,15 +75,15 @@ serve(async (req) => {
       throw new Error('VAPI API key not found. Please configure your API keys first.');
     }
 
-    // Get user's Twilio phone configuration
+    // Get user's AlienVoip SIP phone configuration
     const { data: phoneConfig, error: phoneError } = await supabaseAdmin
       .from('phone_config')
       .select('*')
       .eq('user_id', user.id)
       .single();
 
-    if (phoneError || !phoneConfig || !phoneConfig.twilio_phone_number || !phoneConfig.twilio_account_sid || !phoneConfig.twilio_auth_token) {
-      throw new Error('Twilio configuration not found. Please configure your Twilio phone settings first.');
+    if (phoneError || !phoneConfig || !phoneConfig.sip_username || !phoneConfig.sip_password) {
+      throw new Error('AlienVoip SIP configuration not found. Please configure your SIP settings first.');
     }
 
     // Get the selected prompt - if promptId is null, use the most recent prompt
@@ -336,7 +336,7 @@ serve(async (req) => {
       modelOutputInMessagesEnabled: true,
       transportConfigurations: [
         {
-          provider: 'twilio',
+          provider: 'sip',
           timeout: 60,
           record: true,
           recordingChannels: 'dual'
@@ -344,11 +344,13 @@ serve(async (req) => {
       ]
     };
 
-    // Use user's Twilio configuration
-    const twilioConfig = {
-      twilioPhoneNumber: phoneConfig.twilio_phone_number,
-      twilioAccountSid: phoneConfig.twilio_account_sid,
-      twilioAuthToken: phoneConfig.twilio_auth_token,
+    // Use user's AlienVoip SIP configuration
+    const sipConfig = {
+      sipUri: `sip:${phoneConfig.sip_username}@${phoneConfig.sip_proxy}`,
+      user: phoneConfig.sip_username,
+      password: phoneConfig.sip_password,
+      proxy: phoneConfig.sip_proxy,
+      codec: phoneConfig.sip_codec || 'G729',
     };
 
     // Create a map of phone numbers to customer names from the request
@@ -599,7 +601,7 @@ Only respond with the JSON.`
 
           const postData = {
             assistant: fullAssistantConfig,
-            phoneNumber: twilioConfig,
+            phoneNumber: sipConfig,
             customer: { number: phoneNumber },
             metadata: {
               call_type: 'full_backend_cold_call',
@@ -614,8 +616,8 @@ Only respond with the JSON.`
           };
 
           console.log(`📞 Initiating call to ${phoneNumber}`);
-          console.log(`   Twilio Account: ${twilioConfig.twilioAccountSid?.substring(0, 10)}...`);
-          console.log(`   Twilio Phone: ${twilioConfig.twilioPhoneNumber}`);
+          console.log(`   SIP User: ${sipConfig.user}`);
+          console.log(`   SIP Proxy: ${sipConfig.proxy}`);
           
           // Make call to VAPI API
           const response = await fetch('https://api.vapi.ai/call', {
@@ -676,9 +678,9 @@ Only respond with the JSON.`
               vapi_response: responseData,
               batch_call: true,
               customer_name: contactData?.name || null,
-              twilio_config: {
-                account_sid: twilioConfig.twilioAccountSid?.substring(0, 10) + '...',
-                phone_number: twilioConfig.twilioPhoneNumber
+              sip_config: {
+                user: sipConfig.user,
+                proxy: sipConfig.proxy
               }
             }
           });
