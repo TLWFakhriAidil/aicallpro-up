@@ -75,15 +75,15 @@ serve(async (req) => {
       throw new Error('VAPI API key not found. Please configure your API keys first.');
     }
 
-    // Get user's AlienVoip SIP phone configuration
+    // Get user's Twilio phone configuration
     const { data: phoneConfig, error: phoneError } = await supabaseAdmin
       .from('phone_config')
       .select('*')
       .eq('user_id', user.id)
       .single();
 
-    if (phoneError || !phoneConfig || !phoneConfig.sip_username || !phoneConfig.sip_password) {
-      throw new Error('AlienVoip SIP configuration not found. Please configure your SIP settings first.');
+    if (phoneError || !phoneConfig || !phoneConfig.twilio_phone_number || !phoneConfig.twilio_account_sid || !phoneConfig.twilio_auth_token) {
+      throw new Error('Twilio configuration not found. Please configure your Twilio phone settings first.');
     }
 
     // Get the selected prompt - if promptId is null, use the most recent prompt
@@ -344,8 +344,12 @@ serve(async (req) => {
       ]
     };
 
-    // AlienVoip SIP is configured in Twilio - use Twilio phone number from apiKeys
-    const twilioPhoneNumber = apiKeys.phone_number_id;
+    // Use user's Twilio configuration
+    const twilioConfig = {
+      twilioPhoneNumber: phoneConfig.twilio_phone_number,
+      twilioAccountSid: phoneConfig.twilio_account_sid,
+      twilioAuthToken: phoneConfig.twilio_auth_token,
+    };
 
     // Create a map of phone numbers to customer names from the request
     const phoneToNameMap = new Map<string, string>();
@@ -595,7 +599,7 @@ Only respond with the JSON.`
 
           const postData = {
             assistant: fullAssistantConfig,
-            phoneNumberId: twilioPhoneNumber,
+            phoneNumber: twilioConfig,
             customer: { number: phoneNumber },
             metadata: {
               call_type: 'full_backend_cold_call',
@@ -610,7 +614,8 @@ Only respond with the JSON.`
           };
 
           console.log(`📞 Initiating call to ${phoneNumber}`);
-          console.log(`   Using Twilio Number: ${twilioPhoneNumber}`);
+          console.log(`   Twilio Account: ${twilioConfig.twilioAccountSid?.substring(0, 10)}...`);
+          console.log(`   Twilio Phone: ${twilioConfig.twilioPhoneNumber}`);
           
           // Make call to VAPI API
           const response = await fetch('https://api.vapi.ai/call', {
@@ -671,7 +676,10 @@ Only respond with the JSON.`
               vapi_response: responseData,
               batch_call: true,
               customer_name: contactData?.name || null,
-              twilio_number: twilioPhoneNumber
+              twilio_config: {
+                account_sid: twilioConfig.twilioAccountSid?.substring(0, 10) + '...',
+                phone_number: twilioConfig.twilioPhoneNumber
+              }
             }
           });
 

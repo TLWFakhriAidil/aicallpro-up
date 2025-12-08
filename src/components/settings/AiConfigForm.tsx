@@ -32,11 +32,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Schema for phone configuration
 const phoneConfigSchema = z.object({
-  sip_proxy: z.string().default('sip1.alienvoip.com'),
-  sip_proxy_sec: z.string().default('sip3.alienvoip.com'),
-  sip_username: z.string().min(1, 'SIP Username diperlukan'),
-  sip_password: z.string().min(1, 'SIP Password diperlukan'),
-  sip_codec: z.string().default('G729'),
+  twilio_phone_number: z.string().min(1, "Twilio phone number is required"),
+  twilio_account_sid: z.string().min(1, "Twilio Account SID is required"),
+  twilio_auth_token: z.string().min(1, "Twilio Auth Token is required"),
   whacenter_device_id: z.string().optional(),
 });
 
@@ -70,11 +68,9 @@ export function AiConfigForm() {
   const phoneForm = useForm<PhoneConfigFormData>({
     resolver: zodResolver(phoneConfigSchema),
     defaultValues: {
-      sip_proxy: "sip1.alienvoip.com",
-      sip_proxy_sec: "sip3.alienvoip.com",
-      sip_username: "",
-      sip_password: "",
-      sip_codec: "G729",
+      twilio_phone_number: "",
+      twilio_account_sid: "",
+      twilio_auth_token: "",
       whacenter_device_id: "",
     },
   });
@@ -144,11 +140,9 @@ export function AiConfigForm() {
 
       // Reset phone form
       phoneForm.reset({
-        sip_proxy: phoneConfig?.sip_proxy || "sip1.alienvoip.com",
-        sip_proxy_sec: phoneConfig?.sip_proxy_sec || "sip3.alienvoip.com",
-        sip_username: phoneConfig?.sip_username || "",
-        sip_password: phoneConfig?.sip_password || "",
-        sip_codec: phoneConfig?.sip_codec || "G729",
+        twilio_phone_number: phoneConfig?.twilio_phone_number || "",
+        twilio_account_sid: phoneConfig?.twilio_account_sid || "",
+        twilio_auth_token: phoneConfig?.twilio_auth_token || "",
         whacenter_device_id: phoneConfig?.whacenter_device_id || "",
       });
 
@@ -178,12 +172,9 @@ export function AiConfigForm() {
       if (!user) throw new Error("User not authenticated");
 
       const phoneConfigData = {
-        sip_proxy: data.sip_proxy,
-        sip_proxy_sec: data.sip_proxy_sec,
-        sip_username: data.sip_username,
-        sip_password: data.sip_password,
-        sip_codec: data.sip_codec,
-        provider: 'alienvoip',
+        twilio_phone_number: data.twilio_phone_number,
+        twilio_account_sid: data.twilio_account_sid,
+        twilio_auth_token: data.twilio_auth_token,
         whacenter_device_id: data.whacenter_device_id || null,
         updated_at: new Date().toISOString(),
       };
@@ -372,9 +363,64 @@ export function AiConfigForm() {
             <Alert className="border-primary/20 bg-primary/5">
               <Info className="h-4 w-4 text-primary" />
               <AlertDescription>
-                <p className="text-sm">
-                  Sistem sekarang menggunakan AlienVoip SIP untuk panggilan keluar. Masukkan kredensial SIP anda di bawah.
-                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Belum ada akaun Twilio? Daftar sekarang untuk dapatkan credentials:</span>
+                    <Button variant="outline" size="sm" className="ml-4" asChild>
+                      <a
+                        href="https://www.twilio.com/en-us"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2"
+                      >
+                        Daftar Twilio
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-primary/10">
+                    <span className="text-sm">Dapatkan phone number anda:</span>
+                    <Button variant="outline" size="sm" className="ml-4" asChild>
+                      <a
+                        href="https://console.twilio.com/us1/develop/phone-numbers/manage/incoming"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2"
+                      >
+                        Get Phone Number
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-primary/10">
+                    <span className="text-sm">Dapatkan Account SID & Auth Token:</span>
+                    <Button variant="outline" size="sm" className="ml-4" asChild>
+                      <a
+                        href="https://console.twilio.com/us1/account/keys-credentials/api-keys"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2"
+                      >
+                        Get Credentials
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-primary/10">
+                    <span className="text-sm">Tutorial Dapatkan Number Trial Twilio:</span>
+                    <Button variant="outline" size="sm" className="ml-4" asChild>
+                      <a
+                        href="/twilio-tutorial"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2"
+                      >
+                        Get Tutorial
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
               </AlertDescription>
             </Alert>
 
@@ -383,12 +429,12 @@ export function AiConfigForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={phoneForm.control}
-                    name="sip_proxy"
+                    name="twilio_phone_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>SIP Proxy</FormLabel>
+                        <FormLabel>Twilio Phone Number</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="sip1.alienvoip.com" />
+                          <Input {...field} placeholder="+17755242070" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -397,12 +443,32 @@ export function AiConfigForm() {
 
                   <FormField
                     control={phoneForm.control}
-                    name="sip_proxy_sec"
+                    name="twilio_account_sid"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>SIP Proxy Secondary</FormLabel>
+                        <FormLabel>Twilio Account SID</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="sip3.alienvoip.com" />
+                          <div className="relative">
+                            <Input
+                              {...field}
+                              type={showAccountSid ? "text" : "password"}
+                              placeholder="ACb04sasfa234bd27d7ee7be008cf4be5d"
+                              className="pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                              onClick={() => setShowAccountSid(!showAccountSid)}
+                            >
+                              {showAccountSid ? (
+                                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -412,30 +478,16 @@ export function AiConfigForm() {
 
                 <FormField
                   control={phoneForm.control}
-                  name="sip_username"
+                  name="twilio_auth_token"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>SIP Username</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="646006395" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={phoneForm.control}
-                  name="sip_password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SIP Password</FormLabel>
+                      <FormLabel>Twilio Auth Token</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
                             {...field}
                             type={showAuthToken ? "text" : "password"}
-                            placeholder="Masukkan SIP Password"
+                            placeholder="c9dcesa53f6b38b1c1a0b810dc5a3835"
                             className="pr-10"
                           />
                           <Button
@@ -452,20 +504,6 @@ export function AiConfigForm() {
                             )}
                           </Button>
                         </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={phoneForm.control}
-                  name="sip_codec"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SIP Codec</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="G729" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
