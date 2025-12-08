@@ -595,7 +595,7 @@ Only respond with the JSON.`
 
           const postData = {
             assistant: fullAssistantConfig,
-            phoneNumber: twilioPhoneNumber,
+            phoneNumberId: twilioPhoneNumber,
             customer: { number: phoneNumber },
             metadata: {
               call_type: 'full_backend_cold_call',
