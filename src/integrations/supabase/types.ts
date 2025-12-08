@@ -772,10 +772,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      can_user_make_calls: {
-        Args: { p_user_id: string }
-        Returns: boolean
-      }
+      can_user_make_calls: { Args: { p_user_id: string }; Returns: boolean }
       create_trial_subscription: {
         Args: { p_user_id: string }
         Returns: string
