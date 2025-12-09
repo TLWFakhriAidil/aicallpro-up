@@ -19,6 +19,7 @@ import { ExternalLink, Info, Eye, EyeOff } from 'lucide-react';
 // Schema for form validation
 const apiKeysSchema = z.object({
   vapi_api_key: z.string().min(1, 'VAPI API Key is required'),
+  phone_number_id: z.string().min(1, 'Twilio Phone Number ID is required'),
 });
 
 type ApiKeysFormData = z.infer<typeof apiKeysSchema>;
@@ -26,6 +27,7 @@ type ApiKeysFormData = z.infer<typeof apiKeysSchema>;
 interface ApiKeysData {
   id: string;
   vapi_api_key: string;
+  phone_number_id: string;
   status: string;
 }
 
@@ -40,6 +42,7 @@ export function ApiKeysForm() {
     resolver: zodResolver(apiKeysSchema),
     defaultValues: {
       vapi_api_key: '',
+      phone_number_id: '',
     },
   });
 
@@ -65,6 +68,7 @@ export function ApiKeysForm() {
     if (data) {
       form.reset({
         vapi_api_key: data.vapi_api_key,
+        phone_number_id: data.phone_number_id || '',
       });
     }
   }, [data, form]);
@@ -84,7 +88,7 @@ export function ApiKeysForm() {
       const apiKeyData = {
         vapi_api_key: data.vapi_api_key,
         assistant_id: '',
-        phone_number_id: '',
+        phone_number_id: data.phone_number_id,
         status: 'connected',
         updated_at: new Date().toISOString()
       };
@@ -264,6 +268,26 @@ export function ApiKeysForm() {
                     </div>
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone_number_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Twilio Phone Number ID</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="Enter your Twilio Phone Number ID from VAPI" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Get this from VAPI Dashboard → Phone Numbers → Copy the ID (UUID format)
+                  </p>
                 </FormItem>
               )}
             />
