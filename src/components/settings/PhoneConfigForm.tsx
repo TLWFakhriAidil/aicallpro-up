@@ -2,127 +2,127 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, XCircle, Phone, ExternalLink, Info, BookOpen } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Save } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
-// Schema for form validation
 const phoneConfigSchema = z.object({
-  twilio_phone_number: z.string().min(1, 'Twilio phone number is required'),
-  twilio_account_sid: z.string().min(1, 'Twilio Account SID is required'),
-  twilio_auth_token: z.string().min(1, 'Twilio Auth Token is required'),
+  sip_proxy: z.string().default('sip1.alienvoip.com'),
+  sip_proxy_sec: z.string().default('sip3.alienvoip.com'),
+  sip_username: z.string().min(1, 'SIP Username diperlukan'),
+  sip_password: z.string().min(1, 'SIP Password diperlukan'),
+  sip_codec: z.string().default('G729'),
 });
 
 type PhoneConfigFormData = z.infer<typeof phoneConfigSchema>;
 
 interface PhoneConfigData {
-  id: string;
-  twilio_phone_number: string;
-  twilio_account_sid: string;
-  twilio_auth_token: string;
+  sip_proxy: string;
+  sip_proxy_sec: string;
+  sip_username: string;
+  sip_password: string;
+  sip_codec: string;
 }
 
 export function PhoneConfigForm() {
   const { user } = useCustomAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   const form = useForm<PhoneConfigFormData>({
     resolver: zodResolver(phoneConfigSchema),
     defaultValues: {
-      twilio_phone_number: '',
-      twilio_account_sid: '',
-      twilio_auth_token: '',
+      sip_proxy: 'sip1.alienvoip.com',
+      sip_proxy_sec: 'sip3.alienvoip.com',
+      sip_username: '',
+      sip_password: '',
+      sip_codec: 'G729',
     },
   });
 
-  // Fetch existing phone config
-  const { data, isLoading } = useQuery({
-    queryKey: ['phone-config', user?.id],
+  const { data: phoneConfig, isLoading } = useQuery({
+    queryKey: ['phoneConfig'],
     queryFn: async () => {
-      if (!user) return null;
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.user) throw new Error('Not authenticated');
+
       const { data, error } = await supabase
         .from('phone_config')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', session.session.user.id)
         .maybeSingle();
-      
+
       if (error) throw error;
       return data as PhoneConfigData | null;
     },
-    enabled: !!user,
   });
 
-  // Auto-populate form when data is loaded
   useEffect(() => {
-    if (data) {
+    if (phoneConfig) {
       form.reset({
-        twilio_phone_number: data.twilio_phone_number,
-        twilio_account_sid: data.twilio_account_sid,
-        twilio_auth_token: data.twilio_auth_token,
+        sip_proxy: phoneConfig.sip_proxy || 'sip1.alienvoip.com',
+        sip_proxy_sec: phoneConfig.sip_proxy_sec || 'sip3.alienvoip.com',
+        sip_username: phoneConfig.sip_username || '',
+        sip_password: phoneConfig.sip_password || '',
+        sip_codec: phoneConfig.sip_codec || 'G729',
       });
     }
-  }, [data, form]);
+  }, [phoneConfig, form]);
 
-  // Mutation for saving phone config
   const saveMutation = useMutation({
     mutationFn: async (data: PhoneConfigFormData) => {
-      if (!user) throw new Error('User not authenticated');
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.user) throw new Error('Not authenticated');
 
-      // Check if user already has phone config
       const { data: existingConfig } = await supabase
         .from('phone_config')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', session.session.user.id)
         .maybeSingle();
 
-      const phoneConfigData = {
-        twilio_phone_number: data.twilio_phone_number,
-        twilio_account_sid: data.twilio_account_sid,
-        twilio_auth_token: data.twilio_auth_token,
-        updated_at: new Date().toISOString()
+      const configData = {
+        user_id: session.session.user.id,
+        sip_proxy: data.sip_proxy,
+        sip_proxy_sec: data.sip_proxy_sec,
+        sip_username: data.sip_username,
+        sip_password: data.sip_password,
+        sip_codec: data.sip_codec,
+        provider: 'alienvoip',
+        updated_at: new Date().toISOString(),
       };
 
       if (existingConfig) {
-        // Update existing config
         const { error } = await supabase
           .from('phone_config')
-          .update(phoneConfigData)
-          .eq('user_id', user.id);
-
+          .update(configData)
+          .eq('user_id', session.session.user.id);
         if (error) throw error;
       } else {
-        // Insert new config
         const { error } = await supabase
           .from('phone_config')
-          .insert({
-            user_id: user.id,
-            ...phoneConfigData
-          });
-
+          .insert(configData);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       toast({
-        title: 'Success',
-        description: 'Phone configuration saved successfully!',
+        title: 'Berjaya',
+        description: 'Konfigurasi SIP disimpan!',
       });
-      queryClient.invalidateQueries({ queryKey: ['phone-config', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['phoneConfig'] });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
+        title: 'Ralat',
         description: error.message,
         variant: 'destructive',
       });
@@ -146,129 +146,44 @@ export function PhoneConfigForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center">
-            <Phone className="mr-2 h-5 w-5" />
-            Phone Configuration
-          </span>
-          {data ? (
-            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Configured
-            </Badge>
-          ) : (
-            <Badge variant="secondary">
-              <XCircle className="w-3 h-3 mr-1" />
-              Not Configured
-            </Badge>
-          )}
+        <CardTitle className="flex items-center gap-2">
+          AlienVoip SIP Configuration
+          <Badge variant={phoneConfig ? "default" : "secondary"}>
+            {phoneConfig ? "Configured" : "Not Configured"}
+          </Badge>
         </CardTitle>
         <CardDescription>
-          Configure your Twilio credentials for phone services.
+          Configure kredensial SIP AlienVoip anda
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert className="mb-6 border-primary/20 bg-primary/5">
-          <Info className="h-4 w-4 text-primary" />
-          <AlertDescription className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <span className="text-sm">
-                Belum ada akaun Twilio? Daftar sekarang untuk dapatkan credentials:
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="w-full sm:w-auto"
-              >
-                <a
-                  href="https://www.twilio.com/en-us"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2"
-                >
-                  Daftar Twilio
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </Button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <span className="text-sm">
-                Dapatkan phone number anda:
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="w-full sm:w-auto"
-              >
-                <a
-                  href="/twilio-tutorial"
-                  className="inline-flex items-center justify-center gap-2"
-                >
-                  <Phone className="h-3 w-3" />
-                  Get Phone Number
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </Button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <span className="text-sm">
-                Dapatkan Account SID & Auth Token:
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="w-full sm:w-auto"
-              >
-                <a
-                  href="/twilio-tutorial"
-                  className="inline-flex items-center justify-center gap-2"
-                >
-                  <BookOpen className="h-3 w-3" />
-                  Get Credentials
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </Button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <span className="text-sm">
-                Panduan lengkap setup Twilio:
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="w-full sm:w-auto"
-              >
-                <a
-                  href="/twilio-tutorial"
-                  className="inline-flex items-center justify-center gap-2"
-                >
-                  <BookOpen className="h-3 w-3" />
-                  Tutorial Page
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </Button>
-            </div>
+        <Alert className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>AlienVoip SIP Trunking</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p className="text-sm">
+              Sistem sekarang menggunakan AlienVoip SIP untuk panggilan keluar. Masukkan kredensial SIP anda di bawah.
+            </p>
           </AlertDescription>
         </Alert>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="twilio_phone_number"
+              name="sip_proxy"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Twilio Phone Number</FormLabel>
+                  <FormLabel>SIP Proxy</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="+17755242070" />
+                    <Input
+                      placeholder="sip1.alienvoip.com"
+                      {...field}
+                    />
                   </FormControl>
+                  <FormDescription>
+                    SIP proxy server utama
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -276,13 +191,19 @@ export function PhoneConfigForm() {
 
             <FormField
               control={form.control}
-              name="twilio_account_sid"
+              name="sip_proxy_sec"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Twilio Account SID</FormLabel>
+                  <FormLabel>SIP Proxy Secondary</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="ACb04sasfa234bd27d7ee7be008cf4be5d" />
+                    <Input
+                      placeholder="sip3.alienvoip.com"
+                      {...field}
+                    />
                   </FormControl>
+                  <FormDescription>
+                    SIP proxy server sandaran
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -290,30 +211,80 @@ export function PhoneConfigForm() {
 
             <FormField
               control={form.control}
-              name="twilio_auth_token"
+              name="sip_username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Twilio Auth Token</FormLabel>
+                  <FormLabel>SIP Username</FormLabel>
                   <FormControl>
-                    <Input {...field} type="password" placeholder="c9dcesa53f6b38b1c1a0b810dc5a3835" />
+                    <Input
+                      placeholder="646006395"
+                      {...field}
+                    />
                   </FormControl>
+                  <FormDescription>
+                    Username SIP AlienVoip anda
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <Button 
-              type="submit" 
-              className="w-full"
+            <FormField
+              control={form.control}
+              name="sip_password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SIP Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Masukkan SIP Password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Password SIP AlienVoip anda (disimpan dengan selamat)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="sip_codec"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SIP Codec</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="G729"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Audio codec (G729/G723/gsm/ulaw)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
               disabled={saveMutation.isPending}
+              className="w-full"
             >
               {saveMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Menyimpan...
                 </>
               ) : (
-                'Save Phone Configuration'
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Simpan Konfigurasi
+                </>
               )}
             </Button>
           </form>
