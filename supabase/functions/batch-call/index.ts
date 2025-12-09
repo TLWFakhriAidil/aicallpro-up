@@ -75,15 +75,9 @@ serve(async (req) => {
       throw new Error('VAPI API key not found. Please configure your API keys first.');
     }
 
-    // Get user's AlienVoip SIP phone configuration
-    const { data: phoneConfig, error: phoneError } = await supabaseAdmin
-      .from('phone_config')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (phoneError || !phoneConfig || !phoneConfig.sip_username || !phoneConfig.sip_password) {
-      throw new Error('AlienVoip SIP configuration not found. Please configure your SIP settings first.');
+    // Validate Twilio phone number is configured
+    if (!apiKeys.phone_number_id) {
+      throw new Error('Twilio phone number not found. Please configure your Twilio phone number ID first.');
     }
 
     // Get the selected prompt - if promptId is null, use the most recent prompt
@@ -344,7 +338,7 @@ serve(async (req) => {
       ]
     };
 
-    // AlienVoip SIP is configured in Twilio - use Twilio phone number from apiKeys
+    // Use Twilio phone number from apiKeys
     const twilioPhoneNumber = apiKeys.phone_number_id;
 
     // Create a map of phone numbers to customer names from the request
